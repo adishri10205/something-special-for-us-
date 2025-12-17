@@ -21,14 +21,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Handle audio play/pause when isPlaying changes
+  // Audio playback logic removed
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(e => console.log("Playback failed:", e));
-      } else {
-        audioRef.current.pause();
-      }
-    }
+    // Background music disabled
   }, [isPlaying, currentTrack]);
 
   const togglePlay = () => setIsPlaying(!isPlaying);
@@ -39,21 +34,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <AppContext.Provider value={{ 
-      appState, 
-      setAppState, 
-      isPlaying, 
-      togglePlay, 
-      currentTrack, 
-      playTrack, 
-      audioRef 
+    <AppContext.Provider value={{
+      appState,
+      setAppState,
+      isPlaying,
+      togglePlay,
+      currentTrack,
+      playTrack,
+      audioRef
     }}>
       {/* Hidden Global Audio Player */}
-      <audio 
-        ref={audioRef} 
-        src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" 
-        loop 
-      />
+
       {children}
     </AppContext.Provider>
   );
