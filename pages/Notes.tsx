@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { Note } from '../types';
-import { Send, Plus, PenTool } from 'lucide-react';
+import { Send, Plus, PenTool, Trash2, Edit } from 'lucide-react';
+import EditModal from '../components/EditModal';
 
 const Notes: React.FC = () => {
-  const { notes, setNotes } = useData();
+  const { notes, setNotes, isAdmin } = useData();
   const [inputText, setInputText] = useState('');
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   const handleSend = () => {
     if (!inputText.trim()) return;
@@ -21,6 +23,22 @@ const Notes: React.FC = () => {
 
     setNotes([...notes, newNote]);
     setInputText('');
+  };
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Delete this note?')) {
+      setNotes(notes.filter(n => n.id !== id));
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, note: any) => {
+    e.stopPropagation();
+    setEditingItem(note);
+  };
+
+  const handleUpdate = (id: string, updatedData: any) => {
+    setNotes(notes.map(n => n.id === id ? { ...n, ...updatedData } : n));
   };
 
   return (
@@ -41,7 +59,7 @@ const Notes: React.FC = () => {
               animate={{ opacity: 1, scale: 1, rotate: (index % 2 === 0 ? 1 : -1) }}
               exit={{ opacity: 0, scale: 0.5 }}
               whileHover={{ scale: 1.05, rotate: 0, zIndex: 10 }}
-              className="relative bg-yellow-50 h-64 shadow-md hover:shadow-xl transition-shadow duration-300 p-6 flex flex-col justify-between"
+              className="relative bg-yellow-50 h-64 shadow-md hover:shadow-xl transition-shadow duration-300 p-6 flex flex-col justify-between group"
               style={{
                 // Simple lined paper effect
                 backgroundImage: 'linear-gradient(#e5e5e5 1px, transparent 1px)',
@@ -58,6 +76,14 @@ const Notes: React.FC = () => {
               {/* Tape Element (random visual variation) */}
               {index % 3 === 0 && (
                 <div className="absolute -top-4 left-4 w-12 h-6 bg-white/40 backdrop-blur-sm transform -rotate-3 border-l border-r border-white/20 shadow-sm" />
+              )}
+              
+              {/* Admin Controls */}
+              {isAdmin && (
+                <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => handleEdit(e, note)} className="p-1.5 bg-white/80 rounded-full text-blue-500 hover:bg-blue-100"><Edit size={14} /></button>
+                  <button onClick={(e) => handleDelete(e, note.id)} className="p-1.5 bg-white/80 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
+                </div>
               )}
 
               {/* Note Content */}
@@ -114,6 +140,14 @@ const Notes: React.FC = () => {
           </button>
         </motion.div>
       </div>
+
+      <EditModal 
+        isOpen={!!editingItem} 
+        onClose={() => setEditingItem(null)} 
+        onSave={handleUpdate} 
+        type="notes" 
+        data={editingItem} 
+      />
     </div>
   );
 };

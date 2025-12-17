@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navigation from './Navigation';
 import FloatingHearts from './FloatingHearts';
+import QuickAdd from './QuickAdd';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Layout: React.FC = () => {
@@ -30,6 +31,9 @@ const Layout: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Quick Add Floating Button - Fixed position for all pages */}
+      <QuickAdd className="fixed bottom-24 right-6 md:bottom-12 md:right-12 z-40" />
     </div>
   );
 };

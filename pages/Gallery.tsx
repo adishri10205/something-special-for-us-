@@ -1,11 +1,29 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
-import { X, ZoomIn } from 'lucide-react';
+import { X, ZoomIn, Trash2, Edit } from 'lucide-react';
+import EditModal from '../components/EditModal';
 
 const Gallery: React.FC = () => {
-  const { galleryImages } = useData();
+  const { galleryImages, setGalleryImages, isAdmin } = useData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Delete this image?')) {
+      setGalleryImages(galleryImages.filter(img => img.id !== id));
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setEditingItem(item);
+  };
+
+  const handleUpdate = (id: string, updatedData: any) => {
+    setGalleryImages(galleryImages.map(img => img.id === id ? { ...img, ...updatedData } : img));
+  };
 
   return (
     <div className="p-4 md:p-12 min-h-screen">
@@ -30,13 +48,34 @@ const Gallery: React.FC = () => {
               alt={image.caption} 
               className="w-full h-auto object-cover rounded-xl shadow-md border border-white/50"
             />
+            
+            {/* Hover Overlay */}
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <ZoomIn className="text-white w-8 h-8" />
+               {!isAdmin && <ZoomIn className="text-white w-8 h-8" />}
             </div>
+
+            {/* Admin Controls */}
+            {isAdmin && (
+              <div className="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={(e) => handleEdit(e, image)}
+                  className="bg-blue-500 text-white p-2 rounded-full shadow hover:bg-blue-600"
+                >
+                  <Edit size={14} />
+                </button>
+                <button 
+                  onClick={(e) => handleDelete(e, image.id)}
+                  className="bg-red-500 text-white p-2 rounded-full shadow hover:bg-red-600"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
           </motion.div>
         ))}
       </div>
 
+      {/* Detail Modal */}
       <AnimatePresence>
         {selectedId && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
@@ -73,6 +112,14 @@ const Gallery: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <EditModal 
+        isOpen={!!editingItem} 
+        onClose={() => setEditingItem(null)} 
+        onSave={handleUpdate} 
+        type="gallery" 
+        data={editingItem} 
+      />
     </div>
   );
 };

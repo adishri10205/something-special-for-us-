@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Check, Lock, Image, Music, FileText, Video } from 'lucide-react';
+import { Plus, X, Check, Lock, Image, Music, FileText } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
@@ -128,7 +128,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -136,21 +136,21 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
             />
             
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative z-[101]"
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative z-[101] flex flex-col max-h-[85vh] overflow-hidden"
             >
-              <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-                <h3 className="font-bold text-gray-800">
-                  {isAdmin ? `Add to ${type.charAt(0).toUpperCase() + type.slice(1)}` : 'Admin Access Required'}
+              <div className="p-4 bg-gray-50 border-b flex justify-between items-center shrink-0">
+                <h3 className="font-bold text-gray-800 text-sm sm:text-base truncate pr-2">
+                  {isAdmin ? `Add to ${type.charAt(0).toUpperCase() + type.slice(1)}` : 'Admin Access'}
                 </h3>
-                <button onClick={() => setIsOpen(false)} className="p-1 rounded-full hover:bg-gray-200">
-                  <X size={20} />
+                <button onClick={() => setIsOpen(false)} className="p-2 rounded-full hover:bg-gray-200 transition-colors bg-white shadow-sm shrink-0">
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain">
                 {!isAdmin ? (
                   <div className="space-y-4">
                     <div className="flex flex-col items-center mb-4">
@@ -182,7 +182,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                            <button 
                             key={t}
                             onClick={() => setItemType(t as any)}
-                            className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${itemType === t ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                            className={`px-3 py-1 rounded-full text-xs sm:text-sm flex items-center gap-1 transition-colors ${itemType === t ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-600'}`}
                            >
                              {t === 'image' && <Image size={14}/>}
                              {t === 'note' && <FileText size={14}/>}
@@ -196,7 +196,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                     {(type === 'journey') && (
                        <input 
                          placeholder="Year (e.g. 2025)" 
-                         className="w-full p-3 border rounded-xl bg-gray-50"
+                         className="w-full p-3 border rounded-xl bg-gray-50 text-sm"
                          value={year} onChange={e => setYear(e.target.value)}
                        />
                     )}
@@ -204,7 +204,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                     {(type === 'music' || type === 'journey' || (type === 'vault' && itemType !== 'note')) && (
                        <input 
                          placeholder={type === 'music' ? "Song Title" : "Title / Label"} 
-                         className="w-full p-3 border rounded-xl bg-gray-50"
+                         className="w-full p-3 border rounded-xl bg-gray-50 text-sm"
                          value={title} onChange={e => setTitle(e.target.value)}
                        />
                     )}
@@ -212,7 +212,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                     {(type === 'gallery' || type === 'reels' || type === 'journey' || (type === 'music') || (type === 'vault' && itemType !== 'note')) && (
                       <input 
                         placeholder={type === 'reels' ? "Video URL" : type === 'music' ? "Cover Image URL" : "Image URL"}
-                        className="w-full p-3 border rounded-xl bg-gray-50"
+                        className="w-full p-3 border rounded-xl bg-gray-50 text-sm"
                         value={url} onChange={e => setUrl(e.target.value)}
                       />
                     )}
@@ -220,7 +220,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                     {(type === 'gallery' || type === 'reels' || type === 'music') && (
                       <input 
                         placeholder={type === 'music' ? "Artist" : "Caption"}
-                        className="w-full p-3 border rounded-xl bg-gray-50"
+                        className="w-full p-3 border rounded-xl bg-gray-50 text-sm"
                         value={caption} onChange={e => setCaption(e.target.value)}
                       />
                     )}
@@ -228,7 +228,7 @@ const QuickAdd: React.FC<QuickAddProps> = ({ className = "" }) => {
                     {(type === 'notes' || type === 'journey' || (type === 'vault' && itemType === 'note')) && (
                       <textarea 
                         placeholder={type === 'journey' ? "Description" : "Write your note here..."}
-                        className="w-full p-3 border rounded-xl bg-gray-50"
+                        className="w-full p-3 border rounded-xl bg-gray-50 text-sm"
                         rows={4}
                         value={desc} onChange={e => setDesc(e.target.value)}
                       />

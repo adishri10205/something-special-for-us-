@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Heart, Image, Film, Music, Lock, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import QuickAdd from './QuickAdd';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -48,11 +47,6 @@ const Navigation: React.FC = () => {
             </NavLink>
           ))}
         </div>
-        
-        {/* Quick Add for Desktop Sidebar */}
-        <div className="pb-8">
-           <QuickAdd />
-        </div>
       </motion.nav>
 
       {/* Mobile Bottom Bar */}
@@ -61,17 +55,8 @@ const Navigation: React.FC = () => {
         animate={{ y: 0 }}
         className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-lg border-t border-rose-100 z-50 px-2 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.05)]"
       >
-        {/* Quick Add Floating Button - Attached to top of nav */}
-        <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 z-50">
-          <QuickAdd className="shadow-rose-300/50 shadow-xl" />
-        </div>
-
         <div className="flex justify-between items-center py-2">
           {links.map((link, index) => {
-            // Split links to leave space in middle if we wanted to embed it, 
-            // but since it's floating on top, we just render them all.
-            // We can add a bit of margin to the middle items if needed, 
-            // but with 7 items it fills the space well.
             return (
             <NavLink
               key={link.to}

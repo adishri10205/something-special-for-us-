@@ -1,15 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useApp } from '../context/AppContext';
-import { Play, Pause, Disc } from 'lucide-react';
+import { Play, Pause, Disc, Trash2, Edit } from 'lucide-react';
+import EditModal from '../components/EditModal';
 
 const MusicPage: React.FC = () => {
-  const { musicTracks } = useData();
+  const { musicTracks, setMusicTracks, isAdmin } = useData();
   const { isPlaying, togglePlay, currentTrack, playTrack } = useApp();
+  const [editingItem, setEditingItem] = useState<any>(null);
 
-  // If the current track is removed from data, reset or handle graceful fallback
-  // For demo, we assume tracks exist.
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Delete this track?')) {
+      setMusicTracks(musicTracks.filter(t => t.id !== id));
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setEditingItem(item);
+  };
+
+  const handleUpdate = (id: string, updatedData: any) => {
+    setMusicTracks(musicTracks.map(t => t.id === id ? { ...t, ...updatedData } : t));
+  };
 
   return (
     <div className="p-6 md:p-12 max-w-4xl mx-auto">
@@ -23,7 +38,7 @@ const MusicPage: React.FC = () => {
         >
           <div className="absolute inset-0 bg-black rounded-full shadow-2xl flex items-center justify-center">
             <img 
-              src={currentTrack.cover} 
+              src={currentTrack?.cover || 'https://picsum.photos/100/100'} 
               alt="Cover" 
               className="w-40 h-40 rounded-full object-cover border-4 border-gray-800"
             />
@@ -35,8 +50,8 @@ const MusicPage: React.FC = () => {
         <div className="flex-1 w-full text-center md:text-left space-y-6">
           <div>
             <span className="text-rose-500 text-sm font-semibold tracking-wider uppercase">Now Playing</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mt-1">{currentTrack.title}</h2>
-            <p className="text-xl text-gray-500 mt-1">{currentTrack.artist}</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mt-1">{currentTrack?.title || 'No Track'}</h2>
+            <p className="text-xl text-gray-500 mt-1">{currentTrack?.artist || 'Unknown'}</p>
           </div>
 
           <div className="w-full bg-rose-100 rounded-full h-1.5 overflow-hidden">
@@ -67,25 +82,45 @@ const MusicPage: React.FC = () => {
             key={track.id}
             onClick={() => playTrack(track)}
             whileHover={{ scale: 1.01 }}
-            className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${
-              currentTrack.id === track.id ? 'bg-white/60 shadow-sm border border-rose-100' : 'hover:bg-white/30'
+            className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors group relative ${
+              currentTrack?.id === track.id ? 'bg-white/60 shadow-sm border border-rose-100' : 'hover:bg-white/30'
             }`}
           >
             <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden mr-4">
               <img src={track.cover} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <h4 className={`font-semibold ${currentTrack.id === track.id ? 'text-rose-600' : 'text-gray-800'}`}>
+              <h4 className={`font-semibold ${currentTrack?.id === track.id ? 'text-rose-600' : 'text-gray-800'}`}>
                 {track.title}
               </h4>
               <p className="text-xs text-gray-500">{track.artist}</p>
             </div>
-            <div className="text-xs text-gray-400 font-mono">
-              {currentTrack.id === track.id && isPlaying ? <div className="flex gap-1 items-end h-4"><div className="w-1 bg-rose-400 animate-pulse h-full"></div><div className="w-1 bg-rose-400 animate-pulse h-2"></div><div className="w-1 bg-rose-400 animate-pulse h-3"></div></div> : track.duration}
+            
+            {isAdmin && (
+              <div className="flex gap-2 mr-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => handleEdit(e, track)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full">
+                  <Edit size={16} />
+                </button>
+                <button onClick={(e) => handleDelete(e, track.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-full">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-400 font-mono w-10 text-right">
+              {currentTrack?.id === track.id && isPlaying ? <div className="flex gap-1 items-end h-4 justify-end"><div className="w-1 bg-rose-400 animate-pulse h-full"></div><div className="w-1 bg-rose-400 animate-pulse h-2"></div><div className="w-1 bg-rose-400 animate-pulse h-3"></div></div> : track.duration}
             </div>
           </motion.div>
         ))}
       </div>
+
+      <EditModal 
+        isOpen={!!editingItem} 
+        onClose={() => setEditingItem(null)} 
+        onSave={handleUpdate} 
+        type="music" 
+        data={editingItem} 
+      />
     </div>
   );
 };

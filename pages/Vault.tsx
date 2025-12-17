@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Unlock, FileText, Music, Image } from 'lucide-react';
+import { Lock, Unlock, FileText, Music, Image, Trash2, Edit } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import EditModal from '../components/EditModal';
 
 const Vault: React.FC = () => {
-  const { vaultPin, vaultItems } = useData();
+  const { vaultPin, vaultItems, setVaultItems, isAdmin } = useData();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   const handlePin = (digit: string) => {
     if (pin.length < 4) {
@@ -33,6 +35,22 @@ const Vault: React.FC = () => {
     setError(false);
   };
 
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Delete this item from vault?')) {
+      setVaultItems(vaultItems.filter(v => v.id !== id));
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setEditingItem(item);
+  };
+
+  const handleUpdate = (id: string, updatedData: any) => {
+    setVaultItems(vaultItems.map(v => v.id === id ? { ...v, ...updatedData } : v));
+  };
+
   if (isUnlocked) {
     return (
       <div className="min-h-screen p-6 md:p-12 relative">
@@ -52,8 +70,16 @@ const Vault: React.FC = () => {
               <motion.div 
                 key={item.id}
                 whileHover={{ scale: 1.02 }}
-                className="bg-white rounded-xl shadow-md overflow-hidden border border-rose-100 flex flex-col"
+                className="bg-white rounded-xl shadow-md overflow-hidden border border-rose-100 flex flex-col group relative"
               >
+                {/* Admin Controls */}
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => handleEdit(e, item)} className="p-1.5 bg-white/90 rounded-full text-blue-500 hover:bg-blue-100"><Edit size={14} /></button>
+                    <button onClick={(e) => handleDelete(e, item.id)} className="p-1.5 bg-white/90 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
+                  </div>
+                )}
+
                 {item.type === 'image' && (
                   <div className="aspect-square relative">
                     <img src={item.content} alt={item.label} className="w-full h-full object-cover" />
@@ -90,6 +116,14 @@ const Vault: React.FC = () => {
             )}
           </div>
         </motion.div>
+
+        <EditModal 
+          isOpen={!!editingItem} 
+          onClose={() => setEditingItem(null)} 
+          onSave={handleUpdate} 
+          type="vault" 
+          data={editingItem} 
+        />
       </div>
     );
   }

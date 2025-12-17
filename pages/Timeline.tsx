@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useData } from '../context/DataContext';
-import { Calendar, Heart } from 'lucide-react';
+import { Calendar, Heart, Edit, Trash2 } from 'lucide-react';
+import EditModal from '../components/EditModal';
 
 const Timeline: React.FC = () => {
-  const { timelineData } = useData();
+  const { timelineData, setTimelineData, isAdmin } = useData();
+  const [editingItem, setEditingItem] = useState<any>(null);
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this memory?')) {
+      setTimelineData(timelineData.filter(item => item.id !== id));
+    }
+  };
+
+  const handleUpdate = (id: string, updatedData: any) => {
+    setTimelineData(timelineData.map(item => item.id === id ? { ...item, ...updatedData } : item));
+  };
 
   return (
     <div className="min-h-screen py-8 md:py-12 px-4 md:px-8 max-w-4xl mx-auto overflow-x-hidden">
@@ -55,7 +67,26 @@ const Timeline: React.FC = () => {
               </div>
 
               {/* Content Card */}
-              <div className="ml-12 md:ml-0 md:w-[45%] w-[calc(100%-3rem)]">
+              <div className="ml-12 md:ml-0 md:w-[45%] w-[calc(100%-3rem)] relative">
+                
+                {/* ADMIN CONTROLS */}
+                {isAdmin && (
+                  <div className="absolute -top-3 -right-3 z-30 flex gap-2">
+                    <button 
+                      onClick={() => setEditingItem(event)}
+                      className="bg-blue-500 text-white p-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(event.id)}
+                      className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+
                 <motion.div 
                     whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(244, 63, 94, 0.15)" }}
                     className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white shadow-lg overflow-hidden relative transition-all duration-300"
@@ -91,6 +122,14 @@ const Timeline: React.FC = () => {
           )})}
         </div>
       </div>
+
+      <EditModal 
+        isOpen={!!editingItem} 
+        onClose={() => setEditingItem(null)} 
+        onSave={handleUpdate} 
+        type="journey" 
+        data={editingItem} 
+      />
     </div>
   );
 };
