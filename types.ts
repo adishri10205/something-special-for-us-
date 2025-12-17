@@ -48,7 +48,13 @@ export interface LinkItem {
   id: string;
   url: string;
   title: string;
-  thumbnail?: string; // Optional custom thumbnail, otherwise auto-generated
+  thumbnail?: string;
+}
+
+export interface FlipbookPage {
+  id: string;
+  url: string;
+  caption?: string;
 }
 
 export interface CardVisibility {

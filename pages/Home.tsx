@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2 } from 'lucide-react';
+import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 const cards = [
@@ -76,6 +76,15 @@ const cards = [
     gradient: 'from-cyan-400 via-cyan-500 to-blue-600',
     shadow: 'shadow-cyan-500/25',
     delay: 0.7
+  },
+  {
+    to: '/flipbook',
+    title: 'Storybook',
+    subtitle: 'Our Album',
+    icon: Book,
+    gradient: 'from-amber-500 via-orange-500 to-yellow-500',
+    shadow: 'shadow-orange-500/25',
+    delay: 0.8
   },
 ];
 

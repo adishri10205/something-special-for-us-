@@ -8,7 +8,8 @@ import {
   CardVisibility,
   StartupSettings,
   VaultItem,
-  LinkItem
+  LinkItem,
+  FlipbookPage
 } from '../types';
 import {
   TIMELINE_DATA,
@@ -37,6 +38,8 @@ interface DataContextType {
   setVaultItems: (data: VaultItem[]) => void;
   importantLinks: LinkItem[];
   setImportantLinks: (data: LinkItem[]) => void;
+  flipbookPages: FlipbookPage[];
+  setFlipbookPages: (data: FlipbookPage[]) => void;
   cardVisibility: CardVisibility;
   setCardVisibility: (data: CardVisibility) => void;
   birthdayMessage: string;
@@ -91,6 +94,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [flipbookPages, setFlipbookPages] = useState<FlipbookPage[]>(() => {
+    const saved = localStorage.getItem('flipbookPages');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [cardVisibility, setCardVisibility] = useState<CardVisibility>(() => {
     const saved = localStorage.getItem('cardVisibility');
     return saved ? JSON.parse(saved) : INITIAL_CARD_VISIBILITY;
@@ -132,6 +140,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => localStorage.setItem('notes', JSON.stringify(notes)), [notes]);
   useEffect(() => localStorage.setItem('vaultItems', JSON.stringify(vaultItems)), [vaultItems]);
   useEffect(() => localStorage.setItem('importantLinks', JSON.stringify(importantLinks)), [importantLinks]);
+  useEffect(() => localStorage.setItem('flipbookPages', JSON.stringify(flipbookPages)), [flipbookPages]);
   useEffect(() => localStorage.setItem('cardVisibility', JSON.stringify(cardVisibility)), [cardVisibility]);
   useEffect(() => localStorage.setItem('birthdayMessage', birthdayMessage), [birthdayMessage]);
   useEffect(() => localStorage.setItem('vaultPin', vaultPin), [vaultPin]);
@@ -149,6 +158,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotes(INITIAL_NOTES);
     setVaultItems(INITIAL_VAULT_ITEMS);
     setImportantLinks([]);
+    setFlipbookPages([]);
     setCardVisibility(INITIAL_CARD_VISIBILITY);
     setBirthdayMessage(INITIAL_MESSAGE);
     setVaultPin(VAULT_PIN);
@@ -165,6 +175,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       notes, setNotes,
       vaultItems, setVaultItems,
       importantLinks, setImportantLinks,
+      flipbookPages, setFlipbookPages,
       cardVisibility, setCardVisibility,
       birthdayMessage, setBirthdayMessage,
       vaultPin, setVaultPin,
