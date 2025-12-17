@@ -12,6 +12,7 @@ import MusicPage from './pages/Music';
 import Message from './pages/Message';
 import Notes from './pages/Notes';
 import Vault from './pages/Vault';
+import Links from './pages/Links';
 import Admin from './pages/Admin';
 import { AppState } from './types';
 
@@ -27,7 +28,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Intro />} />
-      
+
       <Route element={<Layout />}>
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/journey" element={<ProtectedRoute><Timeline /></ProtectedRoute>} />
@@ -37,9 +38,10 @@ const AppRoutes: React.FC = () => {
         <Route path="/special" element={<ProtectedRoute><Message /></ProtectedRoute>} />
         <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
         <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
+        <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
         <Route path="/admin" element={<Admin />} />
       </Route>
-      
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

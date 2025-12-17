@@ -1,20 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  TimelineEvent, 
-  GalleryImage, 
-  Reel, 
-  Track, 
-  Note, 
+import {
+  TimelineEvent,
+  GalleryImage,
+  Reel,
+  Track,
+  Note,
   CardVisibility,
   StartupSettings,
-  VaultItem
+  VaultItem,
+  LinkItem
 } from '../types';
-import { 
-  TIMELINE_DATA, 
-  GALLERY_IMAGES, 
-  REELS_DATA, 
-  MUSIC_TRACKS, 
-  INITIAL_NOTES, 
+import {
+  TIMELINE_DATA,
+  GALLERY_IMAGES,
+  REELS_DATA,
+  MUSIC_TRACKS,
+  INITIAL_NOTES,
   INITIAL_CARD_VISIBILITY,
   INITIAL_MESSAGE,
   VAULT_PIN,
@@ -34,6 +35,8 @@ interface DataContextType {
   setNotes: (data: Note[]) => void;
   vaultItems: VaultItem[];
   setVaultItems: (data: VaultItem[]) => void;
+  importantLinks: LinkItem[];
+  setImportantLinks: (data: LinkItem[]) => void;
   cardVisibility: CardVisibility;
   setCardVisibility: (data: CardVisibility) => void;
   birthdayMessage: string;
@@ -83,6 +86,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : INITIAL_VAULT_ITEMS;
   });
 
+  const [importantLinks, setImportantLinks] = useState<LinkItem[]>(() => {
+    const saved = localStorage.getItem('importantLinks');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [cardVisibility, setCardVisibility] = useState<CardVisibility>(() => {
     const saved = localStorage.getItem('cardVisibility');
     return saved ? JSON.parse(saved) : INITIAL_CARD_VISIBILITY;
@@ -123,6 +131,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => localStorage.setItem('musicTracks', JSON.stringify(musicTracks)), [musicTracks]);
   useEffect(() => localStorage.setItem('notes', JSON.stringify(notes)), [notes]);
   useEffect(() => localStorage.setItem('vaultItems', JSON.stringify(vaultItems)), [vaultItems]);
+  useEffect(() => localStorage.setItem('importantLinks', JSON.stringify(importantLinks)), [importantLinks]);
   useEffect(() => localStorage.setItem('cardVisibility', JSON.stringify(cardVisibility)), [cardVisibility]);
   useEffect(() => localStorage.setItem('birthdayMessage', birthdayMessage), [birthdayMessage]);
   useEffect(() => localStorage.setItem('vaultPin', vaultPin), [vaultPin]);
@@ -139,6 +148,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMusicTracks(MUSIC_TRACKS);
     setNotes(INITIAL_NOTES);
     setVaultItems(INITIAL_VAULT_ITEMS);
+    setImportantLinks([]);
     setCardVisibility(INITIAL_CARD_VISIBILITY);
     setBirthdayMessage(INITIAL_MESSAGE);
     setVaultPin(VAULT_PIN);
@@ -154,6 +164,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       musicTracks, setMusicTracks,
       notes, setNotes,
       vaultItems, setVaultItems,
+      importantLinks, setImportantLinks,
       cardVisibility, setCardVisibility,
       birthdayMessage, setBirthdayMessage,
       vaultPin, setVaultPin,

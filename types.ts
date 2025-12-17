@@ -44,6 +44,13 @@ export interface VaultItem {
   label?: string;
 }
 
+export interface LinkItem {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string; // Optional custom thumbnail, otherwise auto-generated
+}
+
 export interface CardVisibility {
   [key: string]: boolean;
 }
