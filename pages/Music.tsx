@@ -1,126 +1,198 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
-import { useApp } from '../context/AppContext';
-import { Play, Pause, Disc, Trash2, Edit } from 'lucide-react';
-import EditModal from '../components/EditModal';
+import { useAuth } from '../context/AuthContext';
+import { Plus, X, Music, Trash2, User } from 'lucide-react';
+import { Track } from '../types';
+
+// Simple Spotify Embed Component
+const SpotifyEmbed = ({ link }: { link: string }) => {
+  const getEmbedUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      // Handle standard open.spotify.com links
+      if (urlObj.hostname === 'open.spotify.com') {
+        const path = urlObj.pathname; // e.g., /track/12345 or /playlist/abcde
+        return `https://open.spotify.com/embed${path}?utm_source=generator&theme=0`;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const embedUrl = getEmbedUrl(link);
+
+  if (!embedUrl) return null;
+
+  return (
+    <iframe
+      style={{ borderRadius: '12px' }}
+      src={embedUrl}
+      width="100%"
+      height="152"
+      frameBorder="0"
+      allowFullScreen
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="lazy"
+      className="shadow-lg mb-2"
+    />
+  );
+};
 
 const MusicPage: React.FC = () => {
   const { musicTracks, setMusicTracks, isAdmin } = useData();
-  const { isPlaying, togglePlay, currentTrack, playTrack } = useApp();
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const { currentUser } = useAuth();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [spotifyLink, setSpotifyLink] = useState('');
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (window.confirm('Delete this track?')) {
+  // Determine current user identity for tagging
+  const userEmail = currentUser?.email?.toLowerCase() || '';
+  const isAditya = userEmail.includes('aditya');
+  const isShruti = userEmail.includes('adishri') || userEmail.includes('shruti');
+
+  // Tag to save with the track
+  const currentTagger = isAditya ? 'aditya' : (isShruti ? 'shruti' : 'unknown');
+
+  // Display text for the Modal
+  const modalTitle = isAditya ? 'Add Music for Shruti ❤️' : (isShruti ? 'Add Music for Aditya 🎸' : 'Add Spotify Song');
+
+  const handleAddLink = () => {
+    if (!spotifyLink) return;
+
+    // Basic check for Spotify URL
+    if (!spotifyLink.includes('open.spotify.com')) {
+      alert('Please enter a valid Spotify link (e.g., https://open.spotify.com/track/...)');
+      return;
+    }
+
+    const newTrack: Track = {
+      id: `spotify-${Date.now()}`,
+      title: 'Spotify Track',
+      artist: 'Spotify',
+      duration: '0:00',
+      cover: '',
+      url: spotifyLink,
+      addedBy: currentTagger
+    };
+
+    setMusicTracks([...musicTracks, newTrack]);
+    setSpotifyLink('');
+    setIsAddModalOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Remove this Spotify track?')) {
       setMusicTracks(musicTracks.filter(t => t.id !== id));
     }
   };
 
-  const handleEdit = (e: React.MouseEvent, item: any) => {
-    e.stopPropagation();
-    setEditingItem(item);
-  };
-
-  const handleUpdate = (id: string, updatedData: any) => {
-    setMusicTracks(musicTracks.map(t => t.id === id ? { ...t, ...updatedData } : t));
-  };
-
   return (
-    <div className="p-6 md:p-12 max-w-4xl mx-auto">
-      <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-6 md:p-10 shadow-xl border border-white/50 flex flex-col md:flex-row gap-10 items-center">
-        
-        {/* Now Playing Art */}
-        <motion.div 
-          className="relative w-64 h-64 flex-shrink-0"
-          animate={{ rotate: isPlaying ? 360 : 0 }}
-          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-        >
-          <div className="absolute inset-0 bg-black rounded-full shadow-2xl flex items-center justify-center">
-            <img 
-              src={currentTrack?.cover || 'https://picsum.photos/100/100'} 
-              alt="Cover" 
-              className="w-40 h-40 rounded-full object-cover border-4 border-gray-800"
-            />
-            <div className="absolute w-8 h-8 bg-rose-50 rounded-full border-2 border-gray-300" />
-          </div>
-        </motion.div>
+    <div className="min-h-screen p-6 md:p-12 pb-32 max-w-2xl mx-auto">
 
-        {/* Controls */}
-        <div className="flex-1 w-full text-center md:text-left space-y-6">
-          <div>
-            <span className="text-rose-500 text-sm font-semibold tracking-wider uppercase">Now Playing</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mt-1">{currentTrack?.title || 'No Track'}</h2>
-            <p className="text-xl text-gray-500 mt-1">{currentTrack?.artist || 'Unknown'}</p>
-          </div>
-
-          <div className="w-full bg-rose-100 rounded-full h-1.5 overflow-hidden">
-            <motion.div 
-              className="h-full bg-rose-500 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: isPlaying ? "100%" : "0%" }}
-              transition={{ duration: 200, ease: "linear" }} 
-            />
-          </div>
-
-          <div className="flex items-center justify-center md:justify-start gap-6">
-            <button 
-              onClick={togglePlay}
-              className="w-16 h-16 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 transition-colors hover:scale-105 active:scale-95"
-            >
-              {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
-            </button>
-          </div>
+      {/* Header + Add Button */}
+      <div className="flex justify-between items-center mb-10">
+        <div>
+          <h2 className="text-4xl font-script text-gray-800">Our Vibe</h2>
+          <p className="text-gray-500 text-sm mt-1">Songs that remind me of you</p>
         </div>
+        {isAdmin && (
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition-transform hover:scale-105"
+          >
+            <Plus size={24} />
+          </button>
+        )}
       </div>
 
-      {/* Playlist */}
-      <div className="mt-12 space-y-4">
-        <h3 className="text-xl font-bold text-gray-700 mb-4 px-2">Birthday Playlist</h3>
+      {/* List of Spotify Embeds */}
+      <div className="space-y-8">
+        {musicTracks.length === 0 && (
+          <div className="text-center py-12 bg-white/50 rounded-3xl border-2 border-dashed border-gray-200">
+            <Music size={48} className="mx-auto text-gray-300 mb-2" />
+            <p className="text-gray-400">No songs added yet.</p>
+          </div>
+        )}
+
         {musicTracks.map((track) => (
-          <motion.div 
+          <motion.div
             key={track.id}
-            onClick={() => playTrack(track)}
-            whileHover={{ scale: 1.01 }}
-            className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors group relative ${
-              currentTrack?.id === track.id ? 'bg-white/60 shadow-sm border border-rose-100' : 'hover:bg-white/30'
-            }`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative group"
           >
-            <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden mr-4">
-              <img src={track.cover} className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <h4 className={`font-semibold ${currentTrack?.id === track.id ? 'text-rose-600' : 'text-gray-800'}`}>
-                {track.title}
-              </h4>
-              <p className="text-xs text-gray-500">{track.artist}</p>
-            </div>
-            
-            {isAdmin && (
-              <div className="flex gap-2 mr-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => handleEdit(e, track)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full">
-                  <Edit size={16} />
-                </button>
-                <button onClick={(e) => handleDelete(e, track.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-full">
-                  <Trash2 size={16} />
-                </button>
+            {/* Added By Tag */}
+            {track.addedBy && track.addedBy !== 'unknown' && (
+              <div className={`absolute -top-3 left-2 z-10 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 ${track.addedBy === 'aditya'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-rose-100 text-rose-600'
+                }`}>
+                <User size={10} />
+                {track.addedBy === 'aditya' ? 'Added by Aditya' : 'Added by Shruti'}
               </div>
             )}
 
-            <div className="text-xs text-gray-400 font-mono w-10 text-right">
-              {currentTrack?.id === track.id && isPlaying ? <div className="flex gap-1 items-end h-4 justify-end"><div className="w-1 bg-rose-400 animate-pulse h-full"></div><div className="w-1 bg-rose-400 animate-pulse h-2"></div><div className="w-1 bg-rose-400 animate-pulse h-3"></div></div> : track.duration}
-            </div>
+            {isAdmin && (
+              <button
+                onClick={() => handleDelete(track.id)}
+                className="absolute -top-3 -right-3 z-10 bg-white text-red-500 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+            <SpotifyEmbed link={track.url || ''} />
           </motion.div>
         ))}
       </div>
 
-      <EditModal 
-        isOpen={!!editingItem} 
-        onClose={() => setEditingItem(null)} 
-        onSave={handleUpdate} 
-        type="music" 
-        data={editingItem} 
-      />
+      {/* Add Link Modal */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setIsAddModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800">{modalTitle}</h3>
+                <button onClick={() => setIsAddModalOpen(false)}>
+                  <X size={24} className="text-gray-400 hover:text-gray-600" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 mb-4">
+                Paste a Spotify link to share a song with {isAditya ? 'Shruti' : 'Aditya'}.
+              </p>
+
+              <input
+                type="text"
+                value={spotifyLink}
+                onChange={(e) => setSpotifyLink(e.target.value)}
+                placeholder="Paste Spotify Link here..."
+                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 mb-4 focus:ring-2 focus:ring-green-500 outline-none"
+              />
+
+              <button
+                onClick={handleAddLink}
+                disabled={!spotifyLink}
+                className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+              >
+                Add to Playlist
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

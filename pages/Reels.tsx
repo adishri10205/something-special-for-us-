@@ -1,13 +1,49 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
-import { Heart, Share2, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Heart, Share2, MoreHorizontal, Edit, Trash2, Plus, X, Video, Link as LinkIcon, Play, Loader2, Volume2, VolumeX, Instagram } from 'lucide-react';
 import EditModal from '../components/EditModal';
+import { Reel } from '../types';
 
 const Reels: React.FC = () => {
   const { reelsData, setReelsData, isAdmin } = useData();
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  // Navigation / Scroll State
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Upload State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadCaption, setUploadCaption] = useState('');
+
+  // Audio State
+  const [isMuted, setIsMuted] = useState(true);
+
+  // --- HELPERS ---
+  const extractDriveId = (url: string) => {
+    const match = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|drive\.google\.com\/uc\?.*id=)([-a-zA-Z0-9_]+)/);
+    return match ? match[1] : null;
+  };
+
+  const extractInstagramId = (url: string) => {
+    const match = url.match(/\/reel\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  // --- SCROLL HANDLER ---
+  const handleScroll = () => {
+    if (containerRef.current) {
+      const { scrollTop, clientHeight } = containerRef.current;
+      const index = Math.round(scrollTop / clientHeight);
+      if (index !== activeIndex && index >= 0 && index < reelsData.length) {
+        setActiveIndex(index);
+      }
+    }
+  };
+
+  // --- HANDLERS ---
   const handleDelete = (id: string) => {
     if (window.confirm('Delete this reel?')) {
       setReelsData(reelsData.filter(r => r.id !== id));
@@ -18,71 +54,300 @@ const Reels: React.FC = () => {
     setReelsData(reelsData.map(r => r.id === id ? { ...r, ...updatedData } : r));
   };
 
-  return (
-    <div className="h-screen w-full flex items-center justify-center p-4 pb-24 md:pb-4 overflow-hidden">
-      <div className="h-full w-full max-w-md overflow-y-auto snap-y snap-mandatory no-scrollbar rounded-2xl shadow-2xl border-4 border-white/40 bg-black">
-        {reelsData.map((reel) => (
-          <div key={reel.id} className="snap-start h-full w-full relative bg-black flex items-center justify-center group">
-            {/* Simulated Video Placeholder */}
-            <img 
-              src={reel.videoUrl} 
-              alt="Reel" 
-              className="w-full h-full object-cover opacity-80"
-            />
-            
-            {/* Admin Controls */}
-            {isAdmin && (
-              <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
-                 <button onClick={() => setEditingItem(reel)} className="bg-blue-600/80 p-2 rounded-full text-white hover:bg-blue-600 backdrop-blur-md">
-                   <Edit size={20} />
-                 </button>
-                 <button onClick={() => handleDelete(reel.id)} className="bg-red-600/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md">
-                   <Trash2 size={20} />
-                 </button>
-              </div>
-            )}
+  const handleAddReel = () => {
+    if (!uploadUrl) return;
 
-            {/* Overlay UI */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-end p-6 pointer-events-none">
-               <div className="flex items-end justify-between pointer-events-auto">
-                 <div className="text-white space-y-2">
-                   <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center text-xs font-bold">
-                       ❤️
-                     </div>
-                     <span className="font-semibold text-sm">Us Forever</span>
-                   </div>
-                   <p className="text-sm font-light opacity-90">{reel.caption}</p>
-                 </div>
-                 
-                 <div className="flex flex-col items-center gap-6 text-white mb-4">
-                   <div className="flex flex-col items-center gap-1">
-                     <Heart className="w-8 h-8 hover:fill-rose-500 hover:text-rose-500 transition-colors cursor-pointer" />
-                     <span className="text-xs">{reel.likes}</span>
-                   </div>
-                   <Share2 className="w-7 h-7" />
-                   <MoreHorizontal className="w-7 h-7" />
-                 </div>
-               </div>
-            </div>
-            
-            {/* Play Button Overlay (Simulated) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center blur-sm opacity-50"></div>
-            </div>
-          </div>
-        ))}
-        {reelsData.length === 0 && (
-          <div className="h-full flex items-center justify-center text-white">No reels yet.</div>
+    // Check Instagram First
+    const instaId = extractInstagramId(uploadUrl);
+    if (instaId) {
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: `https://www.instagram.com/reel/${instaId}/embed`,
+        thumbnail: '', // Instagram embeds handle their own preview usually, or we'd need an API
+        caption: uploadCaption,
+        likes: 0
+      };
+      setReelsData([newReel, ...reelsData]);
+      setIsUploadModalOpen(false);
+      setUploadUrl('');
+      setUploadCaption('');
+      return;
+    }
+
+    // Check Google Drive
+    const driveId = extractDriveId(uploadUrl);
+    if (driveId) {
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: `https://drive.google.com/uc?export=download&id=${driveId}`,
+        thumbnail: `https://lh3.googleusercontent.com/d/${driveId}=w400-h400`,
+        caption: uploadCaption,
+        likes: 0
+      };
+      setReelsData([newReel, ...reelsData]);
+      setIsUploadModalOpen(false);
+      setUploadUrl('');
+      setUploadCaption('');
+      return;
+    }
+
+    alert("Invalid Link. Please use a valid Google Drive (Anyone with link) or Instagram Reel link.");
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMuted(!isMuted);
+  };
+
+
+  return (
+    <div className="h-screen w-full flex items-center justify-center p-4 pb-24 md:pb-4 overflow-hidden relative bg-black/5">
+
+      {/* HEADER ACTIONS (ADMIN) */}
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
+        {isAdmin && (
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="p-3 bg-rose-600 text-white rounded-full shadow-lg hover:bg-rose-700 transition-all transform hover:scale-105"
+            title="Add Reel Link"
+          >
+            <Plus size={24} />
+          </button>
         )}
       </div>
 
-      <EditModal 
-        isOpen={!!editingItem} 
-        onClose={() => setEditingItem(null)} 
-        onSave={handleUpdate} 
-        type="reels" 
-        data={editingItem} 
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="h-full w-full max-w-md overflow-y-auto snap-y snap-mandatory no-scrollbar rounded-2xl shadow-2xl border-4 border-white/20 bg-black scroll-smooth"
+      >
+        {reelsData.map((reel, index) => {
+          const isActive = index === activeIndex;
+          const isInstagram = reel.videoUrl.includes('instagram.com');
+
+          return (
+            <div key={reel.id} className="snap-start h-full w-full relative bg-black flex items-center justify-center group overflow-hidden">
+
+              {/* THUMBNAIL BACKGROUND (Drive Only - Insta has its own UI) */}
+              {!isInstagram && (
+                <div className="absolute inset-0 bg-black">
+                  <img
+                    src={reel.thumbnail}
+                    className="w-full h-full object-cover opacity-60 blur-md scale-110"
+                    alt="bg"
+                  />
+                </div>
+              )}
+
+              {/* VIDEO PLAYER */}
+              <div className="w-full h-full relative pointer-events-auto z-10 bg-black flex items-center justify-center">
+                {isActive ? (
+                  isInstagram ? (
+                    <iframe
+                      src={reel.videoUrl}
+                      className="w-full h-full border-0"
+                      allowFullScreen
+                      title="Instagram Reel"
+                    />
+                  ) : (
+                    <VideoPlayer
+                      src={reel.videoUrl || ''}
+                      isMuted={isMuted}
+                      poster={reel.thumbnail}
+                    />
+                  )
+                ) : (
+                  // Placeholder
+                  isInstagram ? (
+                    <div className="text-white/50 flex flex-col items-center gap-2">
+                      <Instagram size={48} />
+                      <span className="text-xs">Instagram Reel</span>
+                    </div>
+                  ) : (
+                    <div className="relative w-full h-full">
+                      <img src={reel.thumbnail} className="w-full h-full object-cover opacity-80" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play size={48} className="text-white/50 fill-white/20" />
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Admin Controls */}
+              {isAdmin && (
+                <div className="absolute top-16 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
+                  <button onClick={() => setEditingItem(reel)} className="bg-blue-600/80 p-2 rounded-full text-white hover:bg-blue-600 backdrop-blur-md shadow-md">
+                    <Edit size={20} />
+                  </button>
+                  <button onClick={() => handleDelete(reel.id)} className="bg-red-600/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-md">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              )}
+
+              {/* Overlay UI (Hide for Instagram as it has its own chrome often, or keep for consistency?) */}
+              {!isInstagram && (
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 flex flex-col justify-end p-6 pointer-events-none z-20">
+                  <div className="flex items-end justify-between pointer-events-auto">
+                    <div className="text-white space-y-3 flex-1 mr-8">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center text-xs font-bold shadow-md shadow-rose-900/50">
+                          <Heart size={14} fill="white" />
+                        </div>
+                        <span className="font-semibold text-sm tracking-wide">Us Forever</span>
+                      </div>
+                      <p className="text-sm font-light opacity-95 leading-relaxed text-shadow-sm">{reel.caption}</p>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-6 text-white mb-2">
+                      {/* Mute Toggle */}
+                      <button onClick={toggleMute} className="p-2 bg-black/40 hover:bg-black/60 rounded-full transition-colors text-white backdrop-blur-sm">
+                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                      </button>
+
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+                          <Heart className="w-7 h-7 hover:fill-rose-500 hover:text-rose-500 transition-colors" />
+                        </div>
+                        <span className="text-xs font-medium">{reel.likes}</span>
+                      </div>
+                      <div className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+                        <Share2 className="w-6 h-6" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {reelsData.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-center text-white/50 gap-4 p-8">
+            <Video size={48} />
+            <p>No reels yet. <br />Add a Drive Link or Instagram Reel!</p>
+          </div>
+        )}
+      </div>
+
+      <EditModal
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onSave={handleUpdate}
+        type="reels"
+        data={editingItem}
+      />
+
+      {/* ADD LINK MODAL */}
+      <AnimatePresence>
+        {isUploadModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setIsUploadModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Add Reel Link</h3>
+                <button onClick={() => setIsUploadModalOpen(false)} className="text-zinc-400 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* URL Input */}
+              <div className="mb-4">
+                <label className="text-xs font-medium text-zinc-400 mb-1 block">Video Link (Drive / Insta)</label>
+                <div className="flex items-center bg-zinc-800 rounded-lg px-3 border border-zinc-700 focus-within:ring-2 focus-within:ring-rose-500">
+                  <LinkIcon size={18} className="text-zinc-500 mr-2" />
+                  <input
+                    type="text"
+                    value={uploadUrl}
+                    onChange={(e) => setUploadUrl(e.target.value)}
+                    placeholder="Paste link here..."
+                    className="w-full bg-transparent text-white py-3 outline-none text-sm"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-2">
+                  * Supports Drive (anyone w/ link) or Instagram Reels.
+                </p>
+              </div>
+
+              {/* Caption */}
+              <div className="mb-6">
+                <label className="text-xs font-medium text-zinc-400 mb-1 block">Caption</label>
+                <input
+                  type="text"
+                  value={uploadCaption}
+                  onChange={(e) => setUploadCaption(e.target.value)}
+                  placeholder="Write a caption..."
+                  className="w-full bg-zinc-800 border-zinc-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-rose-500 outline-none"
+                />
+              </div>
+
+              <button
+                onClick={handleAddReel}
+                disabled={!uploadUrl}
+                className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Plus size={20} />
+                Add Reel
+              </button>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+};
+
+// -- SUB COMPONENT FOR VIDEO HANDLING --
+const VideoPlayer: React.FC<{ src: string, isMuted: boolean, poster: string }> = ({ src, isMuted, poster }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log("Autoplay prevented:", error);
+          // Usually due to interaction requirements if not muted
+        });
+      }
+    }
+  }, [src]);
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-black">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center z-20">
+          <Loader2 className="animate-spin text-white/50" size={32} />
+        </div>
+      )}
+      <video
+        ref={videoRef}
+        src={src}
+        className="w-full h-full object-contain"
+        loop
+        muted={isMuted}
+        playsInline
+        autoPlay
+        poster={poster}
+        onLoadedData={() => setIsLoading(false)}
+        onClick={(e) => {
+          e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause();
+        }}
       />
     </div>
   );

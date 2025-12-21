@@ -16,7 +16,7 @@ const Vault: React.FC = () => {
       const newPin = pin + digit;
       setPin(newPin);
       setError(false);
-      
+
       if (newPin.length === 4) {
         if (newPin === vaultPin) {
           setTimeout(() => setIsUnlocked(true), 300);
@@ -54,20 +54,20 @@ const Vault: React.FC = () => {
   if (isUnlocked) {
     return (
       <div className="min-h-screen p-6 md:p-12 relative">
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           className="text-center"
         >
           <div className="mb-8">
-             <Unlock className="w-16 h-16 text-rose-500 mx-auto mb-2" />
-             <h2 className="text-3xl font-bold text-gray-800">My Secret Vault</h2>
-             <p className="text-gray-500 text-sm">Shh... it's our secret.</p>
+            <Unlock className="w-16 h-16 text-rose-500 mx-auto mb-2" />
+            <h2 className="text-3xl font-bold text-gray-800">My Secret Vault</h2>
+            <p className="text-gray-500 text-sm">Shh... it's our secret.</p>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-24">
             {vaultItems.map((item) => (
-              <motion.div 
+              <motion.div
                 key={item.id}
                 whileHover={{ scale: 1.02 }}
                 className="bg-white rounded-xl shadow-md overflow-hidden border border-rose-100 flex flex-col group relative"
@@ -88,7 +88,7 @@ const Vault: React.FC = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {item.type === 'note' && (
                   <div className="aspect-square bg-yellow-50 p-4 flex flex-col justify-center items-center text-center relative">
                     <FileText className="text-yellow-400 mb-2" size={24} />
@@ -110,19 +110,19 @@ const Vault: React.FC = () => {
             ))}
 
             {vaultItems.length === 0 && (
-               <div className="col-span-full py-12 text-gray-400">
-                 The vault is empty. Add something special.
-               </div>
+              <div className="col-span-full py-12 text-gray-400">
+                The vault is empty. Add something special.
+              </div>
             )}
           </div>
         </motion.div>
 
-        <EditModal 
-          isOpen={!!editingItem} 
-          onClose={() => setEditingItem(null)} 
-          onSave={handleUpdate} 
-          type="vault" 
-          data={editingItem} 
+        <EditModal
+          isOpen={!!editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={handleUpdate}
+          type="vault"
+          data={editingItem}
         />
       </div>
     );
@@ -130,7 +130,7 @@ const Vault: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         className="bg-white/40 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/60 w-full max-w-sm"
         animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
       >
@@ -139,16 +139,15 @@ const Vault: React.FC = () => {
             <Lock size={32} />
           </div>
           <h2 className="text-xl font-semibold text-gray-800">Enter PIN</h2>
-          <p className="text-xs text-gray-500 mt-1">Hint: {vaultPin}</p>
+
         </div>
 
         <div className="flex justify-center gap-4 mb-8">
           {[0, 1, 2, 3].map((i) => (
-            <div 
-              key={i} 
-              className={`w-4 h-4 rounded-full transition-colors duration-200 ${
-                i < pin.length ? 'bg-rose-500' : 'bg-gray-300'
-              }`} 
+            <div
+              key={i}
+              className={`w-4 h-4 rounded-full transition-colors duration-200 ${i < pin.length ? 'bg-rose-500' : 'bg-gray-300'
+                }`}
             />
           ))}
         </div>

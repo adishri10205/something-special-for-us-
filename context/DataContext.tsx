@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { db } from '../src/firebaseConfig';
+import { ref, onValue, set } from 'firebase/database';
+import { useAuth } from './AuthContext';
 import {
   TimelineEvent,
   GalleryImage,
@@ -9,7 +12,12 @@ import {
   StartupSettings,
   VaultItem,
   LinkItem,
-  FlipbookPage
+  FlipbookPage,
+  IntroStep,
+  ChatStep,
+  WishFolder,
+  YoutubeVideo,
+  VoiceNote
 } from '../types';
 import {
   TIMELINE_DATA,
@@ -20,7 +28,13 @@ import {
   INITIAL_CARD_VISIBILITY,
   INITIAL_MESSAGE,
   VAULT_PIN,
-  INITIAL_VAULT_ITEMS
+  INITIAL_VAULT_ITEMS,
+  DEFAULT_STARTUP_SETTINGS,
+  DEFAULT_INTRO_FLOW,
+  INITIAL_ADMIN_EMAILS,
+  DEFAULT_CHAT_STEPS,
+  INITIAL_WISH_FOLDERS,
+  YOUTUBE_VIDEOS
 } from '../constants';
 
 interface DataContextType {
@@ -44,127 +58,204 @@ interface DataContextType {
   setCardVisibility: (data: CardVisibility) => void;
   birthdayMessage: string;
   setBirthdayMessage: (msg: string) => void;
+  welcomeMessage: string;
+  setWelcomeMessage: (msg: string) => void;
   vaultPin: string;
   setVaultPin: (pin: string) => void;
   startupSettings: StartupSettings;
   setStartupSettings: (settings: StartupSettings) => void;
+  introFlow: IntroStep[];
+  setIntroFlow: (flow: IntroStep[]) => void;
+  chatSteps: ChatStep[];
+  setChatSteps: (flow: ChatStep[]) => void;
+  adminEmails: string[];
+  setAdminEmails: (emails: string[]) => void;
+  wishFolders: WishFolder[];
+  setWishFolders: (data: WishFolder[]) => void;
+  youtubeVideos: YoutubeVideo[];
+  setYoutubeVideos: (data: YoutubeVideo[]) => void;
+  voiceNotes: VoiceNote[];
+  setVoiceNotes: (data: VoiceNote[]) => void;
+  isLoadingChat: boolean;
+  isLoadingSettings: boolean;
   markIntroSeen: () => void;
   resetData: () => void;
   isAdmin: boolean;
   login: (password: string) => boolean;
   logout: () => void;
+  migrateData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state from LocalStorage or Constants
-  const [timelineData, setTimelineData] = useState<TimelineEvent[]>(() => {
-    const saved = localStorage.getItem('timelineData');
-    return saved ? JSON.parse(saved) : TIMELINE_DATA;
-  });
+  const { isAdmin: authIsAdmin, currentUser, logout: authLogout } = useAuth();
 
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(() => {
-    const saved = localStorage.getItem('galleryImages');
-    return saved ? JSON.parse(saved) : GALLERY_IMAGES;
-  });
+  // Local state to hold data from Firebase
+  const [timelineData, _setTimelineData] = useState<TimelineEvent[]>([]);
+  const [galleryImages, _setGalleryImages] = useState<GalleryImage[]>([]);
+  const [reelsData, _setReelsData] = useState<Reel[]>([]);
+  const [musicTracks, _setMusicTracks] = useState<Track[]>([]);
+  const [notes, _setNotes] = useState<Note[]>([]);
+  const [vaultItems, _setVaultItems] = useState<VaultItem[]>([]);
+  const [importantLinks, _setImportantLinks] = useState<LinkItem[]>([]);
+  const [flipbookPages, _setFlipbookPages] = useState<FlipbookPage[]>([]);
+  const [cardVisibility, _setCardVisibility] = useState<CardVisibility>(INITIAL_CARD_VISIBILITY);
+  const [birthdayMessage, _setBirthdayMessage] = useState<string>(INITIAL_MESSAGE);
+  const [welcomeMessage, _setWelcomeMessage] = useState<string>("Welcome, My Besti");
+  const [vaultPin, _setVaultPin] = useState<string>(VAULT_PIN);
+  const [startupSettings, _setStartupSettings] = useState<StartupSettings>({ mode: 'full', showOnce: true, hasSeen: false });
+  const [introFlow, _setIntroFlow] = useState<IntroStep[]>(DEFAULT_INTRO_FLOW);
+  const [chatSteps, _setChatSteps] = useState<ChatStep[]>([]);
+  const [adminEmails, _setAdminEmails] = useState<string[]>(INITIAL_ADMIN_EMAILS);
+  const [wishFolders, _setWishFolders] = useState<WishFolder[]>([]);
+  const [youtubeVideos, _setYoutubeVideos] = useState<YoutubeVideo[]>([]);
+  const [voiceNotes, _setVoiceNotes] = useState<VoiceNote[]>([]);
+  const [isLoadingChat, setIsLoadingChat] = useState(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
-  const [reelsData, setReelsData] = useState<Reel[]>(() => {
-    const saved = localStorage.getItem('reelsData');
-    return saved ? JSON.parse(saved) : REELS_DATA;
-  });
+  // --- FIREBASE LISTENERS ---
+  useEffect(() => {
+    const refs = {
+      timeline: ref(db, 'content/timeline'),
+      gallery: ref(db, 'content/gallery'),
+      reels: ref(db, 'content/reels'),
+      music: ref(db, 'content/music'),
+      notes: ref(db, 'content/notes'),
+      vault: ref(db, 'content/vault'),
+      links: ref(db, 'content/links'),
+      flipbook: ref(db, 'content/flipbook'),
+      settings: ref(db, 'settings'),
+      chat: ref(db, 'settings/chatSteps'),
+      admins: ref(db, 'settings/adminEmails'),
+      folders: ref(db, 'content/wishFolders'),
+      youtube: ref(db, 'content/youtube'),
+      voiceNotes: ref(db, 'content/voiceNotes')
+    };
 
-  const [musicTracks, setMusicTracks] = useState<Track[]>(() => {
-    const saved = localStorage.getItem('musicTracks');
-    return saved ? JSON.parse(saved) : MUSIC_TRACKS;
-  });
+    const unsubscribes = [
+      onValue(refs.timeline, (snap) => {
+        const val = snap.val();
 
-  const [notes, setNotes] = useState<Note[]>(() => {
-    const saved = localStorage.getItem('notes');
-    return saved ? JSON.parse(saved) : INITIAL_NOTES;
-  });
+        // Smart Sync: If Admin, check if DB is missing new entries
+        if (authIsAdmin) {
+          const dbLen = Array.isArray(val) ? val.length : 0;
+          const codeLen = TIMELINE_DATA.length;
 
-  const [vaultItems, setVaultItems] = useState<VaultItem[]>(() => {
-    const saved = localStorage.getItem('vaultItems');
-    return saved ? JSON.parse(saved) : INITIAL_VAULT_ITEMS;
-  });
+          // If DB has fewer items, or if the latest item ID doesn't match code's latest (update/add scenario)
+          if (!val || dbLen < codeLen || (dbLen > 0 && val[dbLen - 1]?.id !== TIMELINE_DATA[codeLen - 1]?.id)) {
+            // Clone and push, or just overwrite since code is truth for structure
+            // For now, simpler to overwrite to ensure consistency with constants
+            console.log("Auto-syncing Timeline Data to Firebase...");
+            set(refs.timeline, TIMELINE_DATA);
+          }
+        }
+        _setTimelineData(val || TIMELINE_DATA);
+      }),
+      onValue(refs.gallery, (snap) => _setGalleryImages(snap.val() || GALLERY_IMAGES)),
+      onValue(refs.reels, (snap) => _setReelsData(snap.val() || REELS_DATA)),
+      onValue(refs.music, (snap) => _setMusicTracks(snap.val() || MUSIC_TRACKS)),
+      onValue(refs.notes, (snap) => _setNotes(snap.val() || INITIAL_NOTES)),
+      onValue(refs.vault, (snap) => _setVaultItems(snap.val() || INITIAL_VAULT_ITEMS)),
+      onValue(refs.links, (snap) => _setImportantLinks(snap.val() || [])),
+      onValue(refs.flipbook, (snap) => _setFlipbookPages(snap.val() || [])),
+      onValue(refs.chat, (snap) => {
+        _setChatSteps(snap.val() || DEFAULT_CHAT_STEPS);
+        setIsLoadingChat(false);
+      }),
+      onValue(refs.admins, (snap) => _setAdminEmails(snap.val() || INITIAL_ADMIN_EMAILS)),
+      onValue(refs.folders, (snap) => _setWishFolders(snap.val() || INITIAL_WISH_FOLDERS)),
+      onValue(refs.youtube, (snap) => _setYoutubeVideos(snap.val() || YOUTUBE_VIDEOS)),
+      onValue(refs.voiceNotes, (snap) => _setVoiceNotes(snap.val() || [])),
+      onValue(refs.settings, (snap) => {
+        const val = snap.val();
+        if (val) {
+          if (val.cardVisibility) _setCardVisibility(val.cardVisibility);
+          if (val.birthdayMessage) _setBirthdayMessage(val.birthdayMessage);
+          if (val.welcomeMessage) _setWelcomeMessage(val.welcomeMessage);
+          if (val.vaultPin) _setVaultPin(val.vaultPin);
+          if (val.startupSettings) _setStartupSettings({ ...DEFAULT_STARTUP_SETTINGS, ...val.startupSettings });
+          if (val.introFlow) _setIntroFlow(val.introFlow);
+        }
+        setIsLoadingSettings(false);
+      })
+    ];
 
-  const [importantLinks, setImportantLinks] = useState<LinkItem[]>(() => {
-    const saved = localStorage.getItem('importantLinks');
-    return saved ? JSON.parse(saved) : [];
-  });
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [authIsAdmin]); // dependency added for auto-sync
 
-  const [flipbookPages, setFlipbookPages] = useState<FlipbookPage[]>(() => {
-    const saved = localStorage.getItem('flipbookPages');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [cardVisibility, setCardVisibility] = useState<CardVisibility>(() => {
-    const saved = localStorage.getItem('cardVisibility');
-    return saved ? JSON.parse(saved) : INITIAL_CARD_VISIBILITY;
-  });
-
-  const [birthdayMessage, setBirthdayMessage] = useState<string>(() => {
-    const saved = localStorage.getItem('birthdayMessage');
-    return saved ? saved : INITIAL_MESSAGE;
-  });
-
-  const [vaultPin, setVaultPin] = useState<string>(() => {
-    const saved = localStorage.getItem('vaultPin');
-    return saved ? saved : VAULT_PIN;
-  });
-
-  const [startupSettings, setStartupSettings] = useState<StartupSettings>(() => {
-    const saved = localStorage.getItem('startupSettings');
-    return saved ? JSON.parse(saved) : { mode: 'full', showOnce: true, hasSeen: false };
-  });
-
-  // Admin Auth State (Not persisted for security/session)
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  const login = (password: string) => {
-    if (password === 'admin') {
-      setIsAdmin(true);
-      return true;
+  // --- WRITE HELPERS ---
+  const updateDb = (path: string, data: any) => {
+    if (authIsAdmin) {
+      set(ref(db, path), data);
+    } else {
+      alert("Only admins can modify content.");
     }
-    return false;
   };
 
-  const logout = () => setIsAdmin(false);
+  // --- SETTERS (Now writing to DB) ---
+  const setTimelineData = (data: TimelineEvent[]) => updateDb('content/timeline', data);
+  const setGalleryImages = (data: GalleryImage[]) => updateDb('content/gallery', data);
+  const setReelsData = (data: Reel[]) => updateDb('content/reels', data);
+  const setMusicTracks = (data: Track[]) => updateDb('content/music', data);
+  const setNotes = (data: Note[]) => updateDb('content/notes', data);
+  const setVaultItems = (data: VaultItem[]) => updateDb('content/vault', data);
+  const setImportantLinks = (data: LinkItem[]) => updateDb('content/links', data);
+  const setFlipbookPages = (data: FlipbookPage[]) => updateDb('content/flipbook', data);
+  const setWishFolders = (data: WishFolder[]) => updateDb('content/wishFolders', data);
+  const setYoutubeVideos = (data: YoutubeVideo[]) => updateDb('content/youtube', data);
+  const setVoiceNotes = (data: VoiceNote[]) => updateDb('content/voiceNotes', data);
 
-  // Effects to save to LocalStorage whenever data changes
-  useEffect(() => localStorage.setItem('timelineData', JSON.stringify(timelineData)), [timelineData]);
-  useEffect(() => localStorage.setItem('galleryImages', JSON.stringify(galleryImages)), [galleryImages]);
-  useEffect(() => localStorage.setItem('reelsData', JSON.stringify(reelsData)), [reelsData]);
-  useEffect(() => localStorage.setItem('musicTracks', JSON.stringify(musicTracks)), [musicTracks]);
-  useEffect(() => localStorage.setItem('notes', JSON.stringify(notes)), [notes]);
-  useEffect(() => localStorage.setItem('vaultItems', JSON.stringify(vaultItems)), [vaultItems]);
-  useEffect(() => localStorage.setItem('importantLinks', JSON.stringify(importantLinks)), [importantLinks]);
-  useEffect(() => localStorage.setItem('flipbookPages', JSON.stringify(flipbookPages)), [flipbookPages]);
-  useEffect(() => localStorage.setItem('cardVisibility', JSON.stringify(cardVisibility)), [cardVisibility]);
-  useEffect(() => localStorage.setItem('birthdayMessage', birthdayMessage), [birthdayMessage]);
-  useEffect(() => localStorage.setItem('vaultPin', vaultPin), [vaultPin]);
-  useEffect(() => localStorage.setItem('startupSettings', JSON.stringify(startupSettings)), [startupSettings]);
+  const setCardVisibility = (data: CardVisibility) => updateDb('settings/cardVisibility', data);
+  const setBirthdayMessage = (msg: string) => updateDb('settings/birthdayMessage', msg);
+  const setWelcomeMessage = (msg: string) => updateDb('settings/welcomeMessage', msg);
+  const setVaultPin = (pin: string) => updateDb('settings/vaultPin', pin);
+  const setStartupSettings = (settings: StartupSettings) => updateDb('settings/startupSettings', settings);
+  const setIntroFlow = (flow: IntroStep[]) => updateDb('settings/introFlow', flow);
+  const setChatSteps = (flow: ChatStep[]) => updateDb('settings/chatSteps', flow);
+  const setAdminEmails = (emails: string[]) => updateDb('settings/adminEmails', emails);
 
   const markIntroSeen = () => {
-    setStartupSettings(prev => ({ ...prev, hasSeen: true }));
+    // We only update the global 'hasSeen' to indicate at least one person has seen it, 
+    // but the skipping logic relies on localStorage + showOnce setting.
+    if (authIsAdmin) {
+      updateDb('settings/startupSettings', { ...startupSettings, hasSeen: true });
+    }
+  };
+
+  // --- MIGRATION UTILITY ---
+  const migrateData = async () => {
+    if (!authIsAdmin) return;
+    try {
+      await set(ref(db, 'content/timeline'), TIMELINE_DATA);
+      await set(ref(db, 'content/gallery'), GALLERY_IMAGES);
+      await set(ref(db, 'content/reels'), REELS_DATA);
+      await set(ref(db, 'content/music'), MUSIC_TRACKS);
+      await set(ref(db, 'content/notes'), INITIAL_NOTES);
+      await set(ref(db, 'content/vault'), INITIAL_VAULT_ITEMS);
+      await set(ref(db, 'content/wishFolders'), INITIAL_WISH_FOLDERS);
+      await set(ref(db, 'content/youtube'), YOUTUBE_VIDEOS);
+      await set(ref(db, 'settings'), {
+        cardVisibility: INITIAL_CARD_VISIBILITY,
+        birthdayMessage: INITIAL_MESSAGE,
+        vaultPin: VAULT_PIN,
+        startupSettings: { mode: 'full', showOnce: true, hasSeen: false },
+        introFlow: DEFAULT_INTRO_FLOW,
+        chatSteps: DEFAULT_CHAT_STEPS, // Seed with default chat steps
+        adminEmails: INITIAL_ADMIN_EMAILS
+      });
+      alert("Data successfully migrated to Firebase!");
+    } catch (e) {
+      console.error("Migration failed", e);
+      alert("Migration failed.");
+    }
   };
 
   const resetData = () => {
-    setTimelineData(TIMELINE_DATA);
-    setGalleryImages(GALLERY_IMAGES);
-    setReelsData(REELS_DATA);
-    setMusicTracks(MUSIC_TRACKS);
-    setNotes(INITIAL_NOTES);
-    setVaultItems(INITIAL_VAULT_ITEMS);
-    setImportantLinks([]);
-    setFlipbookPages([]);
-    setCardVisibility(INITIAL_CARD_VISIBILITY);
-    setBirthdayMessage(INITIAL_MESSAGE);
-    setVaultPin(VAULT_PIN);
-    setStartupSettings({ mode: 'full', showOnce: true, hasSeen: false });
-    localStorage.clear();
+    if (confirm("Reset all data to defaults in Firebase?")) migrateData();
   };
+
+  const login = (password: string) => { return false; };
 
   return (
     <DataContext.Provider value={{
@@ -178,19 +269,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       flipbookPages, setFlipbookPages,
       cardVisibility, setCardVisibility,
       birthdayMessage, setBirthdayMessage,
+      welcomeMessage, setWelcomeMessage,
       vaultPin, setVaultPin,
       startupSettings, setStartupSettings,
+      introFlow, setIntroFlow,
+      chatSteps, setChatSteps,
+      adminEmails, setAdminEmails,
+      wishFolders, setWishFolders,
+      youtubeVideos, setYoutubeVideos,
+      isLoadingChat,
+      isLoadingSettings,
       markIntroSeen,
       resetData,
-      isAdmin, login, logout
+      isAdmin: authIsAdmin,
+      login,
+      logout: authLogout,
+      migrateData,
+      voiceNotes, setVoiceNotes
     }}>
       {children}
     </DataContext.Provider>
   );
 };
 
+
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) throw new Error("useData must be used within DataProvider");
   return context;
 };
+

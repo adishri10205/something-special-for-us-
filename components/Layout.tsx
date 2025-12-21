@@ -2,19 +2,19 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navigation from './Navigation';
 import FloatingHearts from './FloatingHearts';
-import QuickAdd from './QuickAdd';
 import { motion, AnimatePresence } from 'framer-motion';
-
 const Layout: React.FC = () => {
   const location = useLocation();
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans selection:bg-rose-200 overflow-hidden relative">
+      {/* Header / Top Controls Removed as per request */}
+
       {/* Subtle Background Pattern */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-rose-100/40 via-gray-50 to-gray-50 -z-10" />
-      
+
       <FloatingHearts />
-      
+
       <Navigation />
 
       <main className="relative z-10 md:pl-24 pb-24 md:pb-0 h-screen overflow-y-auto no-scrollbar scroll-smooth">
@@ -32,8 +32,7 @@ const Layout: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {/* Quick Add Floating Button - Fixed position for all pages */}
-      <QuickAdd className="fixed bottom-24 right-6 md:bottom-12 md:right-12 z-40" />
+
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Heart, Image, Film, Music, Lock, MessageCircle } from 'lucide-react';
+import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Navigation: React.FC = () => {
@@ -10,7 +10,9 @@ const Navigation: React.FC = () => {
     { to: '/home', icon: Home, label: 'Home' },
     { to: '/gallery', icon: Image, label: 'Gallery' },
     { to: '/reels', icon: Film, label: 'Reels' },
+    { to: '/videos', icon: Youtube, label: 'Videos' },
     { to: '/music', icon: Music, label: 'Music' },
+    { to: '/profile', icon: User, label: 'Profile' },
   ];
 
   return (

@@ -21,9 +21,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Handle audio play/pause when isPlaying changes
-  // Audio playback logic removed
   useEffect(() => {
-    // Background music disabled
+    if (audioRef.current) {
+      if (isPlaying) {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => console.log("Audio playback error:", error));
+        }
+      } else {
+        audioRef.current.pause();
+      }
+    }
   }, [isPlaying, currentTrack]);
 
   const togglePlay = () => setIsPlaying(!isPlaying);
@@ -43,7 +51,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       playTrack,
       audioRef
     }}>
-      {/* Hidden Global Audio Player */}
+      {/* GLOBAL AUDIO PLAYER */}
+      <audio
+        ref={audioRef}
+        src={currentTrack?.url || ''}
+        loop
+        onError={(e) => console.log("Audio error", e)}
+      />
 
       {children}
     </AppContext.Provider>

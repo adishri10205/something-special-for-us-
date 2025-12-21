@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { FlipbookPage } from '../types';
+import { getOptimizedImageUrl } from '../utils';
 
 interface PageProps {
     children: React.ReactNode;
@@ -19,6 +20,60 @@ const Page = React.forwardRef<HTMLDivElement, PageProps>((props, ref) => {
         </div>
     );
 });
+
+// Extracted Component for smart media handling
+const FlipbookMediaItem: React.FC<{ page: FlipbookPage }> = ({ page }) => {
+    const [hasError, setHasError] = useState(false);
+    const optimizedUrl = getOptimizedImageUrl(page.url);
+
+    // 1. Direct Video File Check
+    if (page.url.match(/\.(mp4|webm|ogg)$/i)) {
+        return (
+            <video
+                src={page.url}
+                controls
+                className="w-full h-full object-contain"
+            />
+        );
+    }
+
+    // 2. If we encountered an error loading the image (e.g. Broken Drive Image Link), 
+    // try to fallback to Google Drive Preview Iframe
+    if (hasError) {
+        // Attempt to extract Drive ID
+        const driveRegex = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|drive\.google\.com\/uc\?.*id=)([-a-zA-Z0-9_]+)/;
+        const match = page.url.match(driveRegex);
+
+        if (match && match[1]) {
+            return (
+                <iframe
+                    src={`https://drive.google.com/file/d/${match[1]}/preview`}
+                    className="w-full h-full border-none object-contain pointer-events-auto"
+                    title="Memory Fallback"
+                    allow="autoplay"
+                />
+            );
+        }
+
+        // If not a drive link or fallback failed, show broken link placeholder
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-gray-400 p-4 text-center">
+                <Trash2 size={24} className="mb-2" />
+                <span className="text-xs">Broken Link</span>
+            </div>
+        );
+    }
+
+    // 3. Default: Try to load as Optimized Image
+    return (
+        <img
+            src={optimizedUrl}
+            alt="Memory"
+            className="w-full h-full object-contain rounded-sm block"
+            onError={() => setHasError(true)}
+        />
+    );
+};
 
 const Flipbook: React.FC = () => {
     const { flipbookPages, setFlipbookPages, isAdmin } = useData();
@@ -37,7 +92,7 @@ const Flipbook: React.FC = () => {
         const newPage: FlipbookPage = {
             id: Date.now().toString(),
             url: newPageUrl,
-            caption: newPageCaption || 'Sweet Memory'
+            caption: newPageCaption
         };
         setFlipbookPages([...flipbookPages, newPage]);
         setNewPageUrl('');
@@ -108,6 +163,7 @@ const Flipbook: React.FC = () => {
                     </div>
                 ) : (
                     <HTMLFlipBook
+                        key={flipbookPages.map(p => p.id).join('-')}
                         width={350}
                         height={500}
                         size="fixed"
@@ -147,14 +203,16 @@ const Flipbook: React.FC = () => {
                                 ) : (
                                     // VIEW MODE
                                     <>
-                                        <div className="w-full h-[65%] relative shadow-sm p-2 bg-white rotate-1 hover:rotate-0 transition-transform duration-500 mb-6">
-                                            <img src={page.url} alt="" className="w-full h-full object-cover" />
+                                        <div className="w-full h-auto max-h-[75%] flex-1 relative shadow-sm p-1 bg-white rotate-1 hover:rotate-0 transition-transform duration-500 mb-4 flex items-center justify-center overflow-hidden">
+                                            <FlipbookMediaItem page={page} />
                                         </div>
-                                        <div className="text-center px-4">
-                                            <p className="font-script text-3xl text-gray-700 leading-relaxed rotate-[-2deg] opacity-90">
-                                                {page.caption}
-                                            </p>
-                                        </div>
+                                        {page.caption && (
+                                            <div className="text-center px-4">
+                                                <p className="font-script text-3xl text-gray-700 leading-relaxed rotate-[-2deg] opacity-90">
+                                                    {page.caption}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* Admin Actions */}
                                         {isAdmin && (
@@ -187,9 +245,19 @@ const Flipbook: React.FC = () => {
             </div>
 
             <div className="mt-8 flex gap-4 text-gray-400 text-sm">
-                <span className="flex items-center gap-1"><ArrowLeft size={14} /> Previous</span>
+                <button
+                    onClick={() => bookRef.current.pageFlip().flipPrev()}
+                    className="flex items-center gap-1 hover:text-rose-500 transition-colors"
+                >
+                    <ArrowLeft size={14} /> Previous
+                </button>
                 <span>|</span>
-                <span className="flex items-center gap-1">Next <ArrowRight size={14} /></span>
+                <button
+                    onClick={() => bookRef.current.pageFlip().flipNext()}
+                    className="flex items-center gap-1 hover:text-rose-500 transition-colors"
+                >
+                    Next <ArrowRight size={14} />
+                </button>
             </div>
         </div>
     );
