@@ -6,13 +6,13 @@ import { getDatabase } from "firebase/database";
 // TODO: Replace the following with your app's Firebase project configuration
 // See: https://firebase.google.com/docs/web/setup#available-libraries
 const firebaseConfig = {
-    apiKey: "AIzaSyCjl9nQySKq3biIlLr7e3nzcZt-AU4Efcs",
-    authDomain: "someting-special-68881.firebaseapp.com",
-    databaseURL: "https://someting-special-68881-default-rtdb.firebaseio.com",
-    projectId: "someting-special-68881",
-    storageBucket: "someting-special-68881.firebasestorage.app",
-    messagingSenderId: "264521734146",
-    appId: "1:264521734146:web:fc6cc1048b039bb6d0ef1b"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
