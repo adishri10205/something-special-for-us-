@@ -32,7 +32,7 @@ const MuxUploader: React.FC = () => {
     }, []);
 
     // Function to create Mux Direct Upload
-    const createMuxUpload = async (type: 'video' | 'audio'): Promise<{ uploadUrl: string, assetId: string, uploadId: string }> => {
+    const createMuxUpload = async (type: 'video' | 'audio', title?: string): Promise<{ uploadUrl: string, assetId: string, uploadId: string }> => {
         // In production, this should be done on your backend
         // For demo purposes, showing the flow
         const response = await fetch('https://api.mux.com/video/v1/uploads', {
@@ -46,7 +46,8 @@ const MuxUploader: React.FC = () => {
                 new_asset_settings: {
                     playback_policy: ['public'],
                     mp4_support: type === 'video' ? 'standard' : 'none',
-                    audio_only: type === 'audio'
+                    audio_only: type === 'audio',
+                    passthrough: title
                 }
             })
         });
@@ -87,7 +88,7 @@ const MuxUploader: React.FC = () => {
 
         try {
             // Create Mux upload
-            const { uploadUrl, assetId, uploadId } = await createMuxUpload(type);
+            const { uploadUrl, assetId, uploadId } = await createMuxUpload(type, file.name);
 
             // Update with asset info
             setUploads(prev => prev.map(u =>

@@ -376,7 +376,8 @@ const MusicPage: React.FC = () => {
       setUploadStatusText('Initializing upload...');
 
       // 1. Create Upload URL
-      const { uploadId, uploadUrl } = await createMuxUpload();
+      const finalTitle = (trackTitle || selectedFile.name) + " - Music";
+      const { uploadId, uploadUrl } = await createMuxUpload({ audioOnly: true, title: finalTitle });
 
       // 2. Upload File
       setUploadStatusText('Uploading audio...');

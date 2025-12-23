@@ -204,7 +204,10 @@ export interface YoutubeVideo {
 export interface VoiceNote {
   id: string;
   title: string;
-  url: string; // Google Drive Link
+  url?: string; // Google Drive Link (Legacy/Alternative)
+  muxPlaybackId?: string; // Mux Playback ID
+  muxAssetId?: string; // Mux Asset ID
+  duration?: number; // Duration in seconds
   createdAt: string;
   createdBy?: string;
 }
