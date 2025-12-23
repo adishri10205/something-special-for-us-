@@ -7,7 +7,7 @@ interface AppContextType {
   setAppState: (state: AppState) => void;
   isPlaying: boolean;
   togglePlay: () => void;
-  currentTrack: Track;
+  currentTrack: Track | null;
   playTrack: (track: Track) => void;
   audioRef: React.RefObject<HTMLAudioElement>;
 }
@@ -17,7 +17,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [appState, setAppState] = useState<AppState>(AppState.INTRO);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<Track>(MUSIC_TRACKS[0]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(MUSIC_TRACKS[0] || null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Handle audio play/pause when isPlaying changes
@@ -52,12 +52,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       audioRef
     }}>
       {/* GLOBAL AUDIO PLAYER */}
-      <audio
-        ref={audioRef}
-        src={currentTrack?.url || ''}
-        loop
-        onError={(e) => console.log("Audio error", e)}
-      />
+      {currentTrack?.url && (
+        <audio
+          ref={audioRef}
+          src={currentTrack.url}
+          loop
+          onError={(e) => console.log("Audio error", e)}
+        />
+      )}
 
       {children}
     </AppContext.Provider>

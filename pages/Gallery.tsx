@@ -5,11 +5,21 @@ import { useData } from '../context/DataContext';
 import { X, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Loader2, FolderInput, RefreshCw, Images, CheckCircle, Edit3 } from 'lucide-react';
 import { getOptimizedImageUrl, getCloudinaryUrl } from '../utils';
 import { GalleryImage } from '../types';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 import { uploadToCloudinary } from '../src/services/uploadService';
 import { CLOUDINARY_CONFIG } from '../src/cloudinaryConfig';
+import { useHeader } from '../context/HeaderContext';
 
 const Gallery: React.FC = () => {
+  const { setTitle } = useHeader();
+
+  useEffect(() => {
+    setTitle('Gallery');
+  }, [setTitle]);
+
   const { galleryImages, setGalleryImages, isAdmin } = useData();
+  const { hasPermission } = useAuth(); // Get hasPermission
+  const canEdit = isAdmin || hasPermission('canEditGallery'); // Define canEdit helper
   const [selectedDisplayIndex, setSelectedDisplayIndex] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [movingItem, setMovingItem] = useState<GalleryImage | null>(null);
@@ -178,7 +188,7 @@ const Gallery: React.FC = () => {
 
   const handleRenameFolder = (oldName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!canEdit) return;
 
     const newName = prompt(`Rename folder "${oldName}" to:`, oldName);
     if (!newName || newName === oldName) return;
@@ -215,7 +225,7 @@ const Gallery: React.FC = () => {
 
   const handleDeleteFolder = (folderName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!canEdit) return;
     if (folderName === 'All') return;
 
     if (window.confirm(`Delete folder "${folderName}" and all its photos?\n\nThis will remove them from the app. (Cloudinary files retained safe)`)) {
@@ -258,7 +268,7 @@ const Gallery: React.FC = () => {
     e.preventDefault(); e.stopPropagation();
     if (!e.dataTransfer) return;
 
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    const droppedFiles = Array.from(e.dataTransfer.files).filter((f: File) => f.type.startsWith('image/'));
 
     if (droppedFiles.length > 0) {
       setUploadFiles(prev => [...prev, ...droppedFiles]);
@@ -426,49 +436,57 @@ const Gallery: React.FC = () => {
   return (
     <div className="min-h-screen pb-24 bg-gray-50/50">
 
-      {/* HEADER SECTION */}
-      <div className="pt-8 pb-4 px-4 text-center bg-white/80 backdrop-blur-sm sticky top-0 z-30 border-b border-gray-100/50">
-        <h2 className="font-script text-5xl text-rose-600 mb-2 drop-shadow-sm">Our Gallery</h2>
-        <p className="text-gray-500 font-light mb-4">Collecting moments, one picture at a time.</p>
+      {/* COMPACT STICKY HEADER */}
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm transition-all duration-300">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
-        {/* CONTROLS BAR */}
-        <div className="flex flex-col md:flex-row items-center justify-between max-w-[1600px] mx-auto px-4 w-full gap-4">
-
-          {/* LEFT: Navigation / Breadcrumbs */}
-          <div className="flex items-center gap-3">
-            {viewMode === 'grid' && (
-              <button
-                onClick={handleBackToFolders}
-                className="flex items-center gap-1 text-rose-600 hover:text-rose-700 font-medium px-3 py-1.5 rounded-full hover:bg-rose-50 transition-colors"
-              >
-                <ChevronLeft size={20} />
-                Folders
-              </button>
-            )}
-
-            {viewMode === 'grid' && (
-              <>
-                <span className="text-gray-300">|</span>
-                <span className="text-2xl font-bold text-gray-800">{activeFolder === 'All' ? 'All Memories' : activeFolder}</span>
-              </>
+          {/* LEFT: Title or Breadcrumbs */}
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            {viewMode === 'grid' ? (
+              <div className="flex items-center gap-2 overflow-hidden">
+                <button
+                  onClick={handleBackToFolders}
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors flex-shrink-0"
+                  title="Back to Folders"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Folder</span>
+                  <h2 className="text-lg md:text-xl font-bold text-gray-800 truncate leading-none">
+                    {activeFolder === 'All' ? 'All Memories' : activeFolder}
+                  </h2>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center text-rose-500 shadow-sm">
+                  <Images size={20} />
+                </div>
+                <div>
+                  <h2 className="font-script text-3xl text-gray-800 leading-none">Our Gallery</h2>
+                  <p className="hidden md:block text-xs text-gray-400 font-medium tracking-wide">Collecting moments</p>
+                </div>
+              </div>
             )}
           </div>
 
-
           {/* RIGHT: Actions */}
-          <div className="flex items-center gap-3">
-            {isAdmin && viewMode === 'folders' && (
-              <button
-                onClick={handleCreateFolder}
-                className="flex items-center gap-2 bg-white text-gray-600 border border-gray-200 hover:border-rose-300 hover:text-rose-600 px-4 py-2 rounded-full shadow-sm transition-all"
-              >
-                <Plus size={18} />
-                New Folder
-              </button>
-            )}
-
-            {isAdmin && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Admin Actions */}
+            {canEdit && (
               <>
+                {viewMode === 'folders' && (
+                  <button
+                    onClick={handleCreateFolder}
+                    className="p-2 md:px-4 md:py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-all flex items-center gap-2"
+                    title="New Folder"
+                  >
+                    <Plus size={20} />
+                    <span className="hidden md:inline text-sm font-medium">Folder</span>
+                  </button>
+                )}
+
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" multiple className="hidden" />
                 <button
                   onClick={() => {
@@ -476,76 +494,73 @@ const Gallery: React.FC = () => {
                     setIsNewFolder(false);
                     setIsUploadModalOpen(true);
                   }}
-                  className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-5 py-2 rounded-full shadow-lg shadow-rose-200 transition-all transform hover:-translate-y-0.5"
+                  className="p-2 md:px-4 md:py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-lg shadow-rose-200/50 transition-all flex items-center gap-2 active:scale-95"
+                  title="Upload Photos"
                 >
-                  <Images size={18} />
-                  <span>Add Photos</span>
+                  <Upload size={20} />
+                  <span className="hidden md:inline text-sm font-medium">Upload</span>
                 </button>
 
                 <button
                   onClick={() => syncWithCloudinary(true)}
                   disabled={isSyncing}
-                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                  className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
                   title="Sync Cloud"
                 >
-                  <RefreshCw size={20} className={isSyncing ? "animate-spin" : ""} />
+                  <RefreshCw size={18} className={isSyncing ? "animate-spin" : ""} />
                 </button>
               </>
             )}
+
+            {/* View Toggle (Optional, maybe future) */}
           </div>
         </div>
 
-        {/* Quick Filter Bar (Only in Grid View) */}
-        {viewMode === 'grid' && (
-          <div className="flex items-center justify-center gap-2 overflow-x-auto py-3 no-scrollbar mt-2 border-t border-gray-100">
+        {/* Quick Filter Bar (Grid View Only & if folders exist) for easy jump */}
+        {viewMode === 'grid' && folders.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto px-4 pb-2 no-scrollbar border-t border-gray-50/50">
             <button
               onClick={() => setActiveFolder('All')}
-              className={`px-4 py-1 rounded-full text-sm font-medium transition-all ${activeFolder === 'All' ? 'bg-rose-100 text-rose-700' : 'text-gray-500 hover:bg-gray-100'}`}
+              className={`px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${activeFolder === 'All' ? 'bg-rose-50 text-rose-600' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              All
+              All Items
             </button>
-            {folders.map(folder => (
-              <div
-                key={folder}
-                onDragOver={(e) => { e.preventDefault(); }}
-                onDrop={(e) => handleFolderDrop(e, folder)}
+            {folders.map(f => (
+              <button
+                key={f}
+                onClick={() => setActiveFolder(f)}
+                className={`px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${activeFolder === f ? 'bg-rose-50 text-rose-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                <button
-                  onClick={() => setActiveFolder(folder)}
-                  className={`px-4 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeFolder === folder
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'text-gray-500 hover:bg-gray-100'
-                    }`}
-                >
-                  {folder}
-                </button>
-              </div>
+                {f}
+              </button>
             ))}
           </div>
         )}
       </div>
 
 
-      {/* MAIN CONTENT AREA */}
-      <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-[50vh]">
 
-        {/* VIEW 1: FOLDER CARDS */}
+
+      {/* MAIN CONTENT AREA */}
+      <div className="p-2 md:p-8 max-w-[1600px] mx-auto min-h-[50vh]">
+
+        {/* VIEW 1: FOLDER CARDS (Mobile Optimized Grid) */}
         {viewMode === 'folders' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
 
             {/* 1. All Memories Card */}
             <div
               onClick={() => handleOpenFolder('All')}
-              className="group relative aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100"
+              className="group relative aspect-[3/4] md:aspect-[4/3] bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100"
             >
               <div className="absolute inset-0 grid grid-cols-2 gap-0.5 opacity-90 group-hover:scale-105 transition-transform duration-700">
                 {getFolderPreviews('All').slice(0, 4).map((img, i) => (
                   <img key={img.id} src={getOptimizedImageUrl(img, 400)} className="w-full h-full object-cover" />
                 ))}
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white text-2xl font-bold">All Memories</h3>
-                <p className="text-white/80 text-sm">{getFolderCount('All')} photos</p>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
+                <h3 className="text-white text-lg font-bold leading-tight">All Memories</h3>
+                <p className="text-white/80 text-xs">{getFolderCount('All')} items</p>
               </div>
             </div>
 
@@ -560,7 +575,7 @@ const Gallery: React.FC = () => {
                   onClick={() => handleOpenFolder(folder)}
                   onDragOver={(e) => { e.preventDefault(); }} // Allow drop on folder card
                   onDrop={(e) => handleFolderDrop(e, folder)}
-                  className="group relative aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100"
+                  className="group relative aspect-[3/4] md:aspect-[4/3] bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100"
                 >
                   {/* Folder Preview Grid (Collage) */}
                   {previews.length > 0 ? (
@@ -572,34 +587,34 @@ const Gallery: React.FC = () => {
                     </div>
                   ) : (
                     <div className="absolute inset-0 bg-rose-50 flex items-center justify-center">
-                      <span className="text-rose-200"><Upload size={48} /></span>
+                      <span className="text-rose-200"><Upload size={32} /></span>
                     </div>
                   )}
 
                   {/* Label Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
                     <div className="flex justify-between items-end">
-                      <div className="flex-1 min-w-0 mr-2">
-                        <h3 className="text-white text-2xl font-bold truncate">{folder}</h3>
-                        <p className="text-white/80 text-sm">{count} photos</p>
+                      <div className="flex-1 min-w-0 mr-1">
+                        <h3 className="text-white text-lg font-bold truncate leading-tight">{folder}</h3>
+                        <p className="text-white/80 text-xs">{count} items</p>
                       </div>
 
                       {/* ADMIN ACTIONS */}
-                      {isAdmin && (
-                        <div className="flex gap-2">
+                      {canEdit && (
+                        <div className="flex gap-1">
                           <button
                             onClick={(e) => handleRenameFolder(folder, e)}
-                            className="p-2 bg-white/20 hover:bg-blue-500/80 rounded-full text-white transition-colors backdrop-blur-sm"
+                            className="p-1.5 bg-white/20 hover:bg-blue-500/80 rounded-full text-white transition-colors backdrop-blur-sm"
                             title="Rename Folder"
                           >
-                            <Edit3 size={18} />
+                            <Edit3 size={14} />
                           </button>
                           <button
                             onClick={(e) => handleDeleteFolder(folder, e)}
-                            className="p-2 bg-white/20 hover:bg-red-500/80 rounded-full text-white transition-colors backdrop-blur-sm"
+                            className="p-1.5 bg-white/20 hover:bg-red-500/80 rounded-full text-white transition-colors backdrop-blur-sm"
                             title="Delete Folder"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       )}
@@ -613,17 +628,17 @@ const Gallery: React.FC = () => {
           </div>
         )}
 
-        {/* VIEW 2: IMAGE GRID (MASONRY) */}
+        {/* VIEW 2: IMAGE GRID (MASONRY - Mobile Optimized) */}
         {viewMode === 'grid' && (
-          <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
+          <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 space-y-3">
             {filteredImages.map((image, index) => (
               <div
                 key={image.id}
-                draggable={isAdmin}
+                draggable={canEdit}
                 onDragStart={(e) => handleImageDragStart(e, image.id)}
                 onDragOver={(e) => { e.preventDefault(); }}
                 onDrop={(e) => handleImageDrop(e, image.id)}
-                className={isAdmin ? "cursor-move" : ""}
+                className={`break-inside-avoid ${canEdit ? "cursor-move" : ""}`}
               >
                 <GalleryItem
                   image={image}
@@ -632,7 +647,7 @@ const Gallery: React.FC = () => {
                     const globalIndex = galleryImages.findIndex(img => img.id === image.id);
                     setSelectedDisplayIndex(globalIndex);
                   }}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   onDelete={(e) => handleDelete(e, image.id)}
                   onMove={(e) => { e.stopPropagation(); setMovingItem(image); }}
                 />
@@ -650,200 +665,206 @@ const Gallery: React.FC = () => {
 
       {/* PORTALS FOR MODALS */}
       {/* Lightbox */}
-      {selectedDisplayIndex !== null && createPortal(
-        <AnimatePresence>
-          <Lightbox
-            image={galleryImages[selectedDisplayIndex]}
-            onClose={() => setSelectedDisplayIndex(null)}
-            onNext={() => navigateImage(1)}
-            onPrev={() => navigateImage(-1)}
-          />
-        </AnimatePresence>,
-        document.body
-      )}
+      {
+        selectedDisplayIndex !== null && createPortal(
+          <AnimatePresence>
+            <Lightbox
+              image={galleryImages[selectedDisplayIndex]}
+              onClose={() => setSelectedDisplayIndex(null)}
+              onNext={() => navigateImage(1)}
+              onPrev={() => navigateImage(-1)}
+            />
+          </AnimatePresence>,
+          document.body
+        )
+      }
 
       {/* Upload Modal */}
-      {isUploadModalOpen && createPortal(
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => !isUploading && setIsUploadModalOpen(false)}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
+      {
+        isUploadModalOpen && createPortal(
+          <AnimatePresence>
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative overflow-visible"
-              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => !isUploading && setIsUploadModalOpen(false)}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
             >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-script text-rose-600">
-                  {uploadFiles.length > 1 ? `Add ${uploadFiles.length} Memories` : 'Add New Memory'}
-                </h3>
-                <button onClick={() => !isUploading && setIsUploadModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload To Folder</label>
-                {!isNewFolder ? (
-                  <div className="flex gap-2">
-                    <select
-                      value={uploadFolderName}
-                      onChange={(e) => {
-                        if (e.target.value === 'NEW') {
-                          setIsNewFolder(true);
-                          setUploadFolderName('');
-                        } else {
-                          setUploadFolderName(e.target.value);
-                        }
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
-                    >
-                      <option value={'All'}>All (Uncategorized)</option>
-                      {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                      <option value="NEW">+ Create New Folder</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Folder Name (e.g. Vacation)"
-                      value={uploadFolderName}
-                      onChange={(e) => setUploadFolderName(e.target.value.replace(/[^a-zA-Z0-9\-_ ]/g, ''))}
-                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                      autoFocus
-                    />
-                    <button onClick={() => { setIsNewFolder(false); setUploadFolderName('All'); }} className="text-gray-500 px-2">Cancel</button>
-                  </div>
-                )}
-              </div>
-
-              <div
-                className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-colors ${uploadFiles.length > 0 ? 'border-rose-300 bg-rose-50' : 'border-gray-300 hover:border-rose-400 cursor-pointer'}`}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative overflow-visible"
+                onClick={e => e.stopPropagation()}
               >
-                {uploadFiles.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-60 custom-scrollbar p-1">
-                    {uploadFiles.map((file, i) => (
-                      <div key={`${file.name}-${file.size}-${i}`} className="relative group aspect-square bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100">
-                        <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="preview" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFile(i);
-                          }}
-                          className="absolute top-1 right-1 bg-white/90 text-red-500 p-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-center border-2 border-dashed border-rose-200 rounded-lg bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer aspect-square" title="Add more">
-                      <Plus size={24} className="text-rose-400" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-6">
-                    <Upload className="mx-auto text-gray-300 mb-2" size={40} />
-                    <p className="text-gray-600 font-medium text-sm">Click or Drag & Drop (Multiple)</p>
-                  </div>
-                )}
-              </div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-script text-rose-600">
+                    {uploadFiles.length > 1 ? `Add ${uploadFiles.length} Memories` : 'Add New Memory'}
+                  </h3>
+                  <button onClick={() => !isUploading && setIsUploadModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                    <X size={24} />
+                  </button>
+                </div>
 
-              <div className="flex gap-3">
-                <button onClick={() => setIsUploadModalOpen(false)} disabled={isUploading} className="flex-1 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50">Cancel</button>
-                <button
-                  onClick={handleUploadConfirm}
-                  disabled={uploadFiles.length === 0 || isUploading || (isNewFolder && !uploadFolderName)}
-                  className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-xl shadow-lg shadow-rose-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={20} />
-                      <span>{uploadProgress.current} / {uploadProgress.total}</span>
-                    </>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Upload To Folder</label>
+                  {!isNewFolder ? (
+                    <div className="flex gap-2">
+                      <select
+                        value={uploadFolderName}
+                        onChange={(e) => {
+                          if (e.target.value === 'NEW') {
+                            setIsNewFolder(true);
+                            setUploadFolderName('');
+                          } else {
+                            setUploadFolderName(e.target.value);
+                          }
+                        }}
+                        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
+                      >
+                        <option value={'All'}>All (Uncategorized)</option>
+                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                        <option value="NEW">+ Create New Folder</option>
+                      </select>
+                    </div>
                   ) : (
-                    <>
-                      <Upload size={20} />
-                      {uploadFiles.length > 0 ? `Post ${uploadFiles.length} Photos` : 'Post Memory'}
-                    </>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Folder Name (e.g. Vacation)"
+                        value={uploadFolderName}
+                        onChange={(e) => setUploadFolderName(e.target.value.replace(/[^a-zA-Z0-9\-_ ]/g, ''))}
+                        className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <button onClick={() => { setIsNewFolder(false); setUploadFolderName('All'); }} className="text-gray-500 px-2">Cancel</button>
+                    </div>
                   )}
-                </button>
-              </div>
+                </div>
+
+                <div
+                  className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-colors ${uploadFiles.length > 0 ? 'border-rose-300 bg-rose-50' : 'border-gray-300 hover:border-rose-400 cursor-pointer'}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  {uploadFiles.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-60 custom-scrollbar p-1">
+                      {uploadFiles.map((file, i) => (
+                        <div key={`${file.name}-${file.size}-${i}`} className="relative group aspect-square bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100">
+                          <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="preview" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFile(i);
+                            }}
+                            className="absolute top-1 right-1 bg-white/90 text-red-500 p-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-center border-2 border-dashed border-rose-200 rounded-lg bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer aspect-square" title="Add more">
+                        <Plus size={24} className="text-rose-400" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-6">
+                      <Upload className="mx-auto text-gray-300 mb-2" size={40} />
+                      <p className="text-gray-600 font-medium text-sm">Click or Drag & Drop (Multiple)</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={() => setIsUploadModalOpen(false)} disabled={isUploading} className="flex-1 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50">Cancel</button>
+                  <button
+                    onClick={handleUploadConfirm}
+                    disabled={uploadFiles.length === 0 || isUploading || (isNewFolder && !uploadFolderName)}
+                    className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-xl shadow-lg shadow-rose-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={20} />
+                        <span>{uploadProgress.current} / {uploadProgress.total}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={20} />
+                        {uploadFiles.length > 0 ? `Post ${uploadFiles.length} Photos` : 'Post Memory'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        </AnimatePresence>,
-        document.body
-      )}
+          </AnimatePresence>,
+          document.body
+        )
+      }
 
       {/* Move Modal */}
-      {movingItem && createPortal(
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setMovingItem(null)}
-          >
-            {/* MOVE MODAL CONTENT */}
+      {
+        movingItem && createPortal(
+          <AnimatePresence>
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm"
-              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setMovingItem(null)}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Move Photo</h3>
-                <button onClick={() => setMovingItem(null)} className="text-gray-400 hover:text-gray-600">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <p className="text-sm text-gray-500 mb-4">Select a destination:</p>
-
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                <button
-                  onClick={() => handleMoveConfirm('All')}
-                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 border border-gray-100 flex items-center gap-3 transition-colors"
-                >
-                  <div className="bg-gray-100 p-2 rounded-full"><FolderInput size={18} className="text-gray-500" /></div>
-                  <span className="font-medium text-gray-700">Main Gallery (Unsorted)</span>
-                </button>
-                {folders.map(folder => (
-                  <button
-                    key={folder}
-                    onClick={() => handleMoveConfirm(folder)}
-                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-rose-50 border border-gray-100 flex items-center gap-3 transition-colors"
-                  >
-                    <div className="bg-rose-100 p-2 rounded-full"><FolderInput size={18} className="text-rose-500" /></div>
-                    <span className="font-medium text-gray-700">{folder}</span>
+              {/* MOVE MODAL CONTENT */}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">Move Photo</h3>
+                  <button onClick={() => setMovingItem(null)} className="text-gray-400 hover:text-gray-600">
+                    <X size={20} />
                   </button>
-                ))}
-              </div>
+                </div>
 
+                <p className="text-sm text-gray-500 mb-4">Select a destination:</p>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  <button
+                    onClick={() => handleMoveConfirm('All')}
+                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 border border-gray-100 flex items-center gap-3 transition-colors"
+                  >
+                    <div className="bg-gray-100 p-2 rounded-full"><FolderInput size={18} className="text-gray-500" /></div>
+                    <span className="font-medium text-gray-700">Main Gallery (Unsorted)</span>
+                  </button>
+                  {folders.map(folder => (
+                    <button
+                      key={folder}
+                      onClick={() => handleMoveConfirm(folder)}
+                      className="w-full text-left px-4 py-3 rounded-xl hover:bg-rose-50 border border-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="bg-rose-100 p-2 rounded-full"><FolderInput size={18} className="text-rose-500" /></div>
+                      <span className="font-medium text-gray-700">{folder}</span>
+                    </button>
+                  ))}
+                </div>
+
+              </motion.div>
             </motion.div>
-          </motion.div>
-        </AnimatePresence>,
-        document.body
-      )}
+          </AnimatePresence>,
+          document.body
+        )
+      }
 
-    </div>
+    </div >
   );
 };
 
-// ... Sub Components (GalleryItem, Lightbox) remain same, implied via overwrite ...
+// ... (No replacement yet, need to read file first) Sub Components (GalleryItem, Lightbox) remain same, implied via overwrite ...
 const GalleryItem: React.FC<{
   image: GalleryImage;
   index: number;
@@ -903,18 +924,38 @@ const Lightbox: React.FC<{
     ? getCloudinaryUrl(image.publicId, { width: 1600 })
     : getOptimizedImageUrl(image, 1600);
 
-  const [isLoaded, setIsLoaded] = useState(false);
+  // Track swipe direction for animation
+  const [[page, direction], setPage] = useState([0, 0]);
+  const [currentImageId, setCurrentImageId] = useState(image.id);
 
-  // Swipe logic
-  const [touchStart, setTouchStart] = useState(0);
-  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.targetTouches[0].clientX);
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) onNext();
-      else onPrev();
+  // Detect legitimate index change from props
+  useEffect(() => {
+    if (image.id !== currentImageId) {
+      setPage([page + 1, 1]); // Default forward
+      setCurrentImageId(image.id);
     }
+  }, [image.id]);
+
+  const swipeConfidenceThreshold = 10000;
+  const swipePower = (offset: number, velocity: number) => {
+    return Math.abs(offset) * velocity;
+  };
+
+  const variants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? '100%' : '-100%',
+      opacity: 0
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? '100%' : '-100%',
+      opacity: 0
+    })
   };
 
   return (
@@ -922,22 +963,52 @@ const Lightbox: React.FC<{
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-md touch-none"
       onClick={onClose}
     >
-      <button className="absolute top-4 right-4 text-white p-2 rounded-full hover:bg-white/10" onClick={onClose}><X size={32} /></button>
-      <button className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full hover:bg-white/10 hidden md:block" onClick={(e) => { e.stopPropagation(); onPrev(); }}><ChevronLeft size={48} /></button>
-      <button className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full hover:bg-white/10 hidden md:block" onClick={(e) => { e.stopPropagation(); onNext(); }}><ChevronRight size={48} /></button>
+      <button className="fixed top-4 right-4 z-[110] bg-black/20 text-white/70 p-3 rounded-full hover:bg-white/20 hover:text-white transition-all backdrop-blur-md" onClick={onClose}><X size={24} /></button>
 
-      <img
-        src={highResUrl}
-        className={`max-w-full max-h-screen object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={() => setIsLoaded(true)}
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      />
-      {!isLoaded && <Loader2 className="absolute animate-spin text-white" size={48} />}
+      {/* Navigation Buttons (Desktop) */}
+      <button className="fixed left-4 top-1/2 -translate-y-1/2 z-[110] text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 hidden md:block transition-all" onClick={(e) => { e.stopPropagation(); onPrev(); }}><ChevronLeft size={48} /></button>
+      <button className="fixed right-4 top-1/2 -translate-y-1/2 z-[110] text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 hidden md:block transition-all" onClick={(e) => { e.stopPropagation(); onNext(); }}><ChevronRight size={48} /></button>
+
+      <div className="w-full h-full flex items-center justify-center p-0 md:p-4 overflow-hidden relative">
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.img
+            key={image.id}
+            src={highResUrl}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 }
+            }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={1}
+            onDragEnd={(e, { offset, velocity }) => {
+              const swipe = swipePower(offset.x, velocity.x);
+              if (swipe < -swipeConfidenceThreshold) {
+                onNext();
+              } else if (swipe > swipeConfidenceThreshold) {
+                onPrev();
+              }
+            }}
+            className="absolute max-w-full max-h-screen object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </AnimatePresence>
+      </div>
+
+      {/* Caption/Footer */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent text-white text-center z-[105] pointer-events-none">
+        {image.caption && <p className="text-lg font-medium mb-1 drop-shadow-md">{image.caption}</p>}
+        <p className="text-white/50 text-xs uppercase tracking-widest">{new Date(image.uploadedAt).toLocaleDateString()}</p>
+      </div>
+
     </motion.div>
   );
 };

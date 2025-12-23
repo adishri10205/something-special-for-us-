@@ -2,10 +2,25 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Unlock, FileText, Music, Image, Trash2, Edit } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import EditModal from '../components/EditModal';
 
 const Vault: React.FC = () => {
   const { vaultPin, vaultItems, setVaultItems, isAdmin } = useData();
+  const { hasPermission } = useAuth();
+
+  if (!hasPermission('canViewVault')) {
+    return (
+      <div className="h-screen flex items-center justify-center p-4">
+        <div className="bg-red-50 text-red-600 p-8 rounded-xl text-center max-w-sm">
+          <Lock size={48} className="mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Access Restricted</h2>
+          <p>You do not have permission to view the Vault.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);

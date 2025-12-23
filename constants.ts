@@ -78,7 +78,6 @@ export const INITIAL_NOTES: Note[] = [];
 export const INITIAL_VAULT_ITEMS: VaultItem[] = [];
 
 export const INITIAL_CARD_VISIBILITY: CardVisibility = {
-  '/special': true,
   '/journey': true,
   '/gallery': true,
   '/reels': true,
@@ -86,6 +85,9 @@ export const INITIAL_CARD_VISIBILITY: CardVisibility = {
   '/music': true,
   '/notes': true,
   '/vault': true,
+  '/links': true,
+  '/flipbook': true,
+  '/voice-notes': true
 };
 
 export const INITIAL_MESSAGE = "Happy Birthday! Welcome to your special corner of the web.";

@@ -3,10 +3,12 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { HeaderProvider } from './context/HeaderContext'; // Added
 import Layout from './components/Layout';
+import MPINGate from './components/MPINGate';
 import { AppState } from './types';
 
-// Lazy Load Pages for Performance Optimization
+
 // Lazy Load Pages for Performance Optimization
 const Intro = lazy(() => import('./pages/Intro'));
 const Login = lazy(() => import('./pages/Login'));
@@ -23,7 +25,6 @@ const Flipbook = lazy(() => import('./pages/Flipbook'));
 const Videos = lazy(() => import('./pages/Videos'));
 const VoiceNotes = lazy(() => import('./pages/VoiceNotes'));
 const Admin = lazy(() => import('./pages/Admin'));
-const Profile = lazy(() => import('./pages/Profile'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { appState } = useApp();
@@ -39,7 +40,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <MPINGate>
+      {children}
+    </MPINGate>
+  );
 };
 
 const LoadingSpinner = () => (
@@ -53,10 +58,11 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Suspense fallback={<LoadingSpinner />}>
+
       <Routes>
         <Route path="/" element={<Intro />} />
         {/* Redirect to home if already logged in */}
-        <Route path="/login" element={currentUser ? <Navigate to="/home" replace /> : <Login />} />
+        <Route path="/login" element={<Login />} />
 
         <Route element={<Layout />}>
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -71,8 +77,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/flipbook" element={<ProtectedRoute><Flipbook /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -86,9 +91,11 @@ const App: React.FC = () => {
     <AppProvider>
       <AuthProvider>
         <DataProvider>
-          <HashRouter>
-            <AppRoutes />
-          </HashRouter>
+          <HeaderProvider>
+            <HashRouter>
+              <AppRoutes />
+            </HashRouter>
+          </HeaderProvider>
         </DataProvider>
       </AuthProvider>
     </AppProvider>

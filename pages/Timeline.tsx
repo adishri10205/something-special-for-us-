@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Calendar, Heart, Edit, Trash2 } from 'lucide-react';
 import EditModal from '../components/EditModal';
 
@@ -8,9 +9,12 @@ import { TIMELINE_DATA } from '../constants'; // Import constants
 
 const Timeline: React.FC = () => {
   const { timelineData, setTimelineData, isAdmin } = useData();
+  const { hasPermission } = useAuth();
+  const canEdit = isAdmin || hasPermission('canEditTimeline');
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const handleDelete = (id: string) => {
+    if (!canEdit) return;
     if (window.confirm('Are you sure you want to delete this memory?')) {
       setTimelineData(timelineData.filter(item => item.id !== id));
     }
@@ -80,7 +84,7 @@ const Timeline: React.FC = () => {
                 <div className="ml-12 md:ml-0 md:w-[45%] w-[calc(100%-3rem)] relative">
 
                   {/* ADMIN CONTROLS */}
-                  {isAdmin && (
+                  {canEdit && (
                     <div className="absolute -top-3 -right-3 z-30 flex gap-2">
                       <button
                         onClick={() => setEditingItem(event)}

@@ -17,14 +17,14 @@ const Layout: React.FC = () => {
 
       <Navigation />
 
-      <main className="relative z-10 md:pl-24 pb-24 md:pb-0 h-screen overflow-y-auto no-scrollbar scroll-smooth">
+      <main className={`relative z-10 md:pl-24 ${location.pathname === '/reels' ? 'pt-0 pb-0' : 'pt-14 md:pt-0 pb-24 md:pb-0'} h-screen overflow-y-auto no-scrollbar scroll-smooth`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, filter: 'blur(5px)' }}
-            animate={{ opacity: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, filter: 'blur(5px)' }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
             className="min-h-full"
           >
             <Outlet />

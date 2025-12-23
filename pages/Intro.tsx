@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { AppState, IntroStep } from '../types';
 import FloatingHearts from '../components/FloatingHearts';
@@ -9,11 +10,12 @@ import ChatIntro from '../components/ChatIntro';
 
 const Intro: React.FC = () => {
   const { setAppState, togglePlay } = useApp();
+  const { currentUser, loading: authLoading } = useAuth();
   const { startupSettings, markIntroSeen, introFlow, isLoadingSettings } = useData();
   const navigate = useNavigate();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const [securityState, setSecurityState] = useState<'idle' | 'checking' | 'verified' | 'failed'>('idle');
   const [isSkipping, setIsSkipping] = useState(true);
 
   // If no flow defined, create a minimal default to prevent errors
@@ -24,7 +26,7 @@ const Intro: React.FC = () => {
   const currentStep = safeFlow[currentStepIndex];
 
   useEffect(() => {
-    if (isLoadingSettings) return;
+    if (isLoadingSettings || authLoading) return;
 
     // Check local storage for seen status (client-specific)
     const localHasSeen = localStorage.getItem('intro_seen') === 'true';
@@ -32,7 +34,8 @@ const Intro: React.FC = () => {
     // Check if we should skip the intro
     const shouldSkip =
       startupSettings.mode === 'direct_home' ||
-      (startupSettings.showOnce && localHasSeen);
+      (startupSettings.showOnce && localHasSeen) ||
+      (currentUser?.mpin);
 
     if (shouldSkip) {
       setAppState(AppState.HOME);
@@ -42,10 +45,10 @@ const Intro: React.FC = () => {
 
       // If mode is 'countdown', jump straight to countdown
       if (startupSettings.mode === 'countdown') {
-        startCountdown();
+        startSecurityProtocol();
       }
     }
-  }, [startupSettings, navigate, setAppState, isLoadingSettings]);
+  }, [startupSettings, navigate, setAppState, isLoadingSettings, authLoading, currentUser]);
 
   if (isLoadingSettings) {
     return (
@@ -65,7 +68,7 @@ const Intro: React.FC = () => {
     if (currentStepIndex < safeFlow.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
     } else {
-      startCountdown();
+      startSecurityProtocol();
     }
   };
 
@@ -73,32 +76,33 @@ const Intro: React.FC = () => {
     handleNext();
   };
 
-  const startCountdown = () => {
+  const startSecurityProtocol = () => {
     // Ensure we don't start multiple intervals
-    if (countdown !== null) return;
+    if (securityState !== 'idle') return;
 
-    setCountdown(3);
-    let count = 3;
-    const timer = setInterval(() => {
-      count--;
-      if (count > 0) {
-        setCountdown(count);
-      } else {
-        clearInterval(timer);
-        if (startupSettings.showOnce) {
-          localStorage.setItem('intro_seen', 'true');
-        }
-        markIntroSeen();
-        setAppState(AppState.HOME);
-        navigate('/home');
+    setSecurityState('checking');
+
+    // Simulate short loading/check then go straight to home
+    setTimeout(() => {
+      if (startupSettings.showOnce) {
+        localStorage.setItem('intro_seen', 'true');
       }
-    }, 1000);
+      markIntroSeen();
+      setAppState(AppState.HOME);
+      navigate('/home');
+    }, 2000);
+  };
+
+  const handleSecurityFailure = () => {
+    setSecurityState('failed');
   };
 
   if (isSkipping) return null;
 
   // Render content based on step type
-  const renderStepContent = (step: IntroStep) => {
+  const renderStepContent = (step: IntroStep | undefined) => {
+    if (!step) return null;
+
     switch (step.type) {
       case 'greeting':
       case 'text':
@@ -183,13 +187,13 @@ const Intro: React.FC = () => {
         return (
           <motion.div
             key={step.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="z-10 w-full px-4 h-[500px] flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="z-10 w-full h-full flex flex-col items-center"
           >
-            <div className="w-full max-w-md h-full">
-              <ChatIntro onComplete={handleNext} />
+            <div className="w-full h-full">
+              <ChatIntro onComplete={handleNext} onFailure={handleSecurityFailure} />
             </div>
           </motion.div>
         );
@@ -236,29 +240,74 @@ const Intro: React.FC = () => {
   };
 
   return (
-    <div className="relative h-screen w-full flex flex-col items-center justify-center bg-rose-50 overflow-hidden">
+    <div className="fixed inset-0 w-full flex flex-col items-center justify-center bg-rose-50 overflow-hidden">
       <FloatingHearts />
 
       <AnimatePresence mode='wait'>
-        {countdown === null ? (
+        {(securityState === 'idle' && currentStep) ? (
           renderStepContent(currentStep)
-        ) : (
+        ) : securityState === 'checking' ? (
           <motion.div
-            key="countdown"
-            className="z-10 flex items-center justify-center"
+            key="checking"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="z-20 p-8 flex flex-col items-center justify-center text-center max-w-sm"
           >
-            <motion.div
-              key={countdown}
-              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1.5, rotate: 0 }}
-              exit={{ opacity: 0, scale: 3 }}
-              transition={{ duration: 0.8 }}
-              className="font-script text-9xl text-rose-500 font-bold"
-            >
-              {countdown}
-            </motion.div>
+            <div className="relative w-24 h-24 mb-6">
+              <div className="absolute inset-0 border-4 border-rose-200 rounded-full animate-ping opacity-20"></div>
+              <div className="absolute inset-0 border-4 border-t-rose-500 border-r-rose-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center text-3xl">🛡️</div>
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 tracking-wide mb-2">VERIFYING IDENTITY</h2>
+            <p className="text-xs text-rose-500 font-mono animate-pulse">RUNNING BIO-METRIC SCAN...</p>
           </motion.div>
-        )}
+        ) : securityState === 'verified' ? (
+          <motion.div
+            key="verified"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="z-20 text-center"
+          >
+            <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-100">
+              <span className="text-5xl">✓</span>
+            </div>
+            <h2 className="text-2xl font-bold text-green-600 tracking-wider">ACCESS GRANTED</h2>
+          </motion.div>
+        ) : securityState === 'failed' ? (
+          <motion.div
+            key="failed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="z-20 bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border-l-4 border-red-500"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Security Alert</h2>
+                <p className="text-xs text-gray-500 font-mono uppercase">UNAUTHORIZED ACCESS DETECTED</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-6">
+              <p className="text-sm text-red-700 font-medium">
+                System could not verify your identity.
+              </p>
+              <p className="text-xs text-red-500 mt-2">
+                Details of this attempt have been logged and sent to the administrator.
+              </p>
+            </div>
+
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-colors"
+            >
+              Close Session
+            </button>
+          </motion.div>
+        ) : null}
       </AnimatePresence>
     </div>
   );

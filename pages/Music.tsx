@@ -42,7 +42,8 @@ const SpotifyEmbed = ({ link }: { link: string }) => {
 
 const MusicPage: React.FC = () => {
   const { musicTracks, setMusicTracks, isAdmin } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
+  const canEdit = isAdmin || hasPermission('canEditMusic');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [spotifyLink, setSpotifyLink] = useState('');
 
@@ -96,7 +97,7 @@ const MusicPage: React.FC = () => {
           <h2 className="text-4xl font-script text-gray-800">Our Vibe</h2>
           <p className="text-gray-500 text-sm mt-1">Songs that remind me of you</p>
         </div>
-        {isAdmin && (
+        {canEdit && (
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition-transform hover:scale-105"

@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Custom Scrollbar Styles (moved from index.html) */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}

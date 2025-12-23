@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import MuxPlayer from '@mux/mux-player-react';
 import { useData } from '../context/DataContext';
-import { Heart, Share2, MoreHorizontal, Edit, Trash2, Plus, X, Video, Link as LinkIcon, Play, Loader2, Volume2, VolumeX, Instagram } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Heart, Share2, MoreHorizontal, Edit, Trash2, Plus, X, Video, Link as LinkIcon, Play, Loader2, Volume2, VolumeX, Instagram, MessageCircle, Send, Music } from 'lucide-react';
 import EditModal from '../components/EditModal';
 import { Reel } from '../types';
 
 const Reels: React.FC = () => {
   const { reelsData, setReelsData, isAdmin } = useData();
+  const { hasPermission } = useAuth();
+  const canEdit = isAdmin || hasPermission('canEditReels');
   const [editingItem, setEditingItem] = useState<any>(null);
 
   // Navigation / Scroll State
@@ -30,6 +34,29 @@ const Reels: React.FC = () => {
   const extractInstagramId = (url: string) => {
     const match = url.match(/\/reel\/([a-zA-Z0-9_-]+)/);
     return match ? match[1] : null;
+  };
+
+  const extractYoutubeShortsId = (url: string) => {
+    const match = url.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  const extractMuxId = (url: string) => {
+    // Matches stream.mux.com/PLAYBACK_ID.m3u8
+    const streamMatch = url.match(/stream\.mux.com\/([a-zA-Z0-9]+)/);
+    if (streamMatch) return streamMatch[1];
+
+    // Check if it's a direct Mux playback ID (alphanumeric string, typically 20-60 chars)
+    if (/^[a-zA-Z0-9]{15,60}$/.test(url.trim())) {
+      return url.trim();
+    }
+
+    return null;
+  };
+
+  const isDirectVideoUrl = (url: string) => {
+    // Check if it's a direct video file URL
+    return /\.(mp4|webm|mov|avi|m3u8)(\?.*)?$/i.test(url);
   };
 
   // --- SCROLL HANDLER ---
@@ -57,13 +84,13 @@ const Reels: React.FC = () => {
   const handleAddReel = () => {
     if (!uploadUrl) return;
 
-    // Check Instagram First
+    // Check Instagram
     const instaId = extractInstagramId(uploadUrl);
     if (instaId) {
       const newReel: Reel = {
         id: `reel-${Date.now()}`,
         videoUrl: `https://www.instagram.com/reel/${instaId}/embed`,
-        thumbnail: '', // Instagram embeds handle their own preview usually, or we'd need an API
+        thumbnail: '',
         caption: uploadCaption,
         likes: 0
       };
@@ -91,7 +118,57 @@ const Reels: React.FC = () => {
       return;
     }
 
-    alert("Invalid Link. Please use a valid Google Drive (Anyone with link) or Instagram Reel link.");
+    // Check YouTube Shorts
+    const shortsId = extractYoutubeShortsId(uploadUrl);
+    if (shortsId) {
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: `https://www.youtube.com/embed/${shortsId}`,
+        thumbnail: `https://img.youtube.com/vi/${shortsId}/0.jpg`,
+        caption: uploadCaption,
+        likes: 0
+      };
+      setReelsData([newReel, ...reelsData]);
+      setIsUploadModalOpen(false);
+      setUploadUrl('');
+      setUploadCaption('');
+      return;
+    }
+
+    // Check Mux (stream URL or direct playback ID)
+    const muxId = extractMuxId(uploadUrl);
+    if (muxId) {
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: `https://stream.mux.com/${muxId}.m3u8`,
+        thumbnail: `https://image.mux.com/${muxId}/thumbnail.png`,
+        caption: uploadCaption,
+        likes: 0
+      };
+      setReelsData([newReel, ...reelsData]);
+      setIsUploadModalOpen(false);
+      setUploadUrl('');
+      setUploadCaption('');
+      return;
+    }
+
+    // Check if it's a direct video URL (.mp4, .webm, etc.)
+    if (isDirectVideoUrl(uploadUrl)) {
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: uploadUrl,
+        thumbnail: '', // No thumbnail for direct URLs
+        caption: uploadCaption,
+        likes: 0
+      };
+      setReelsData([newReel, ...reelsData]);
+      setIsUploadModalOpen(false);
+      setUploadUrl('');
+      setUploadCaption('');
+      return;
+    }
+
+    alert("Invalid Link. Supported formats:\n• Instagram Reel URLs\n• Google Drive video links\n• YouTube Shorts URLs\n• Mux playback IDs or stream URLs\n• Direct video URLs (.mp4, .webm, .mov, .m3u8)");
   };
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -101,11 +178,12 @@ const Reels: React.FC = () => {
 
 
   return (
-    <div className="h-screen w-full flex items-center justify-center p-4 pb-24 md:pb-4 overflow-hidden relative bg-black/5">
+    <div className="h-screen w-full flex items-center justify-center md:p-4 md:pb-4 overflow-hidden relative bg-black md:bg-black/5">
+      {/* Full screen on mobile, centered with padding on desktop */}
 
-      {/* HEADER ACTIONS (ADMIN) */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
-        {isAdmin && (
+      {/* HEADER ACTIONS (ADMIN) - Hidden on mobile to avoid conflict with bottom menu */}
+      <div className="hidden md:flex absolute top-4 right-4 z-50 flex-col gap-3">
+        {canEdit && (
           <button
             onClick={() => setIsUploadModalOpen(true)}
             className="p-3 bg-rose-600 text-white rounded-full shadow-lg hover:bg-rose-700 transition-all transform hover:scale-105"
@@ -119,17 +197,23 @@ const Reels: React.FC = () => {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="h-full w-full max-w-md overflow-y-auto snap-y snap-mandatory no-scrollbar rounded-2xl shadow-2xl border-4 border-white/20 bg-black scroll-smooth"
+        className="h-full w-full md:max-w-md overflow-y-auto snap-y snap-mandatory no-scrollbar md:rounded-2xl md:shadow-2xl md:border-4 md:border-white/20 bg-black scroll-smooth pb-24 md:pb-0"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 100px)' }}
       >
         {reelsData.map((reel, index) => {
           const isActive = index === activeIndex;
           const isInstagram = reel.videoUrl.includes('instagram.com');
+          const driveId = extractDriveId(reel.videoUrl);
+          const isDrive = !!driveId;
+          const isYoutube = reel.videoUrl.includes('youtube.com') || reel.videoUrl.includes('youtu.be');
+          const muxId = extractMuxId(reel.videoUrl);
+          const isMux = !!muxId;
 
           return (
             <div key={reel.id} className="snap-start h-full w-full relative bg-black flex items-center justify-center group overflow-hidden">
 
-              {/* THUMBNAIL BACKGROUND (Drive Only - Insta has its own UI) */}
-              {!isInstagram && (
+              {/* THUMBNAIL BACKGROUND */}
+              {(!isInstagram && !isYoutube && !isMux) && (
                 <div className="absolute inset-0 bg-black">
                   <img
                     src={reel.thumbnail}
@@ -149,6 +233,33 @@ const Reels: React.FC = () => {
                       allowFullScreen
                       title="Instagram Reel"
                     />
+                  ) : isDrive ? (
+                    <iframe
+                      src={`https://drive.google.com/file/d/${driveId}/preview`}
+                      className="w-full h-full border-0"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      title="Drive Video"
+                    />
+                  ) : isYoutube ? (
+                    <iframe
+                      src={`${reel.videoUrl}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${reel.videoUrl.split('/').pop()}`}
+                      className="w-full h-full border-0"
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      title="YouTube Short"
+                    />
+                  ) : isMux ? (
+                    <MuxPlayer
+                      playbackId={muxId}
+                      streamType="on-demand"
+                      autoPlay={true}
+                      loop={true}
+                      muted={isMuted}
+                      className="w-full h-full object-cover"
+                      style={{ height: '100%', width: '100%' }}
+                      metadata={{ video_title: reel.caption || 'Reel' }}
+                    />
                   ) : (
                     <VideoPlayer
                       src={reel.videoUrl || ''}
@@ -163,6 +274,13 @@ const Reels: React.FC = () => {
                       <Instagram size={48} />
                       <span className="text-xs">Instagram Reel</span>
                     </div>
+                  ) : isMux || isYoutube ? (
+                    <div className="relative w-full h-full">
+                      <img src={reel.thumbnail || `https://image.mux.com/${muxId}/thumbnail.png`} className="w-full h-full object-cover opacity-80" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play size={48} className="text-white/80 fill-white/20" />
+                      </div>
+                    </div>
                   ) : (
                     <div className="relative w-full h-full">
                       <img src={reel.thumbnail} className="w-full h-full object-cover opacity-80" />
@@ -174,8 +292,16 @@ const Reels: React.FC = () => {
                 )}
               </div>
 
+              {/* Mute Button - Top Right Corner */}
+              <button
+                onClick={toggleMute}
+                className="absolute top-4 right-4 z-50 p-3 bg-black/40 rounded-full text-white/90 backdrop-blur-sm hover:bg-black/60 transition-all pointer-events-auto"
+              >
+                {isMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+              </button>
+
               {/* Admin Controls */}
-              {isAdmin && (
+              {canEdit && (
                 <div className="absolute top-16 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
                   <button onClick={() => setEditingItem(reel)} className="bg-blue-600/80 p-2 rounded-full text-white hover:bg-blue-600 backdrop-blur-md shadow-md">
                     <Edit size={20} />
@@ -186,36 +312,21 @@ const Reels: React.FC = () => {
                 </div>
               )}
 
-              {/* Overlay UI (Hide for Instagram as it has its own chrome often, or keep for consistency?) */}
+              {/* Overlay UI - Instagram Style */}
               {!isInstagram && (
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 flex flex-col justify-end p-6 pointer-events-none z-20">
-                  <div className="flex items-end justify-between pointer-events-auto">
-                    <div className="text-white space-y-3 flex-1 mr-8">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center text-xs font-bold shadow-md shadow-rose-900/50">
-                          <Heart size={14} fill="white" />
-                        </div>
-                        <span className="font-semibold text-sm tracking-wide">Us Forever</span>
-                      </div>
-                      <p className="text-sm font-light opacity-95 leading-relaxed text-shadow-sm">{reel.caption}</p>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-6 text-white mb-2">
-                      {/* Mute Toggle */}
-                      <button onClick={toggleMute} className="p-2 bg-black/40 hover:bg-black/60 rounded-full transition-colors text-white backdrop-blur-sm">
-                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                      </button>
-
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
-                          <Heart className="w-7 h-7 hover:fill-rose-500 hover:text-rose-500 transition-colors" />
-                        </div>
-                        <span className="text-xs font-medium">{reel.likes}</span>
-                      </div>
-                      <div className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
-                        <Share2 className="w-6 h-6" />
-                      </div>
-                    </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-transparent via-black/30 to-black/80 flex flex-col justify-end p-5 pb-32 md:pb-6 pointer-events-none z-20">
+                  {/* Caption Section */}
+                  <div className="text-white space-y-2 pointer-events-auto">
+                    {reel.title && (
+                      <h3 className="text-base font-bold drop-shadow-lg">
+                        {reel.title}
+                      </h3>
+                    )}
+                    {reel.caption && (
+                      <p className="text-sm font-normal leading-relaxed drop-shadow-md line-clamp-2">
+                        {reel.caption}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -306,7 +417,7 @@ const Reels: React.FC = () => {
         )}
       </AnimatePresence>
 
-    </div>
+    </div >
   );
 };
 
@@ -338,7 +449,7 @@ const VideoPlayer: React.FC<{ src: string, isMuted: boolean, poster: string }> =
       <video
         ref={videoRef}
         src={src}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
         loop
         muted={isMuted}
         playsInline

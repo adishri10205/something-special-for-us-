@@ -70,8 +70,28 @@ export interface UserProfile {
   displayName: string | null;
   photoURL: string | null;
   role: 'admin' | 'user';
+  permissions?: string[]; // ['edit_cards', 'manage_users', 'view_vault']
+  canEditCards?: boolean;
+  mpin?: string; // Security MPIN
+  mpinResetRequested?: boolean; // User requested reset
+  canChangeMpin?: boolean; // Admin allowed change
+  failedMpinAttempts?: number;
+  lastFailedMpinAttempt?: string;
   status?: UserStatusType;
+  lastSeen?: string;
+  customPermissions?: UserPermissions;
   mood?: string;
+}
+
+export interface UserPermissions {
+  canEditTimeline?: boolean;
+  canEditGallery?: boolean;
+  canEditReels?: boolean;
+  canEditMusic?: boolean;
+  canEditNotes?: boolean;
+  canViewVault?: boolean;
+  canViewAdmin?: boolean;
+  canViewMessages?: boolean;
 }
 
 export interface CardVisibility {
@@ -105,7 +125,7 @@ export interface IntroStep {
   buttonText?: string;
 }
 
-export type ChatStepType = 'text' | 'image' | 'gif' | 'link' | 'options';
+export type ChatStepType = 'text' | 'image' | 'gif' | 'link' | 'options' | 'end' | 'login';
 
 export interface ChatStep {
   id: string;
@@ -115,6 +135,7 @@ export interface ChatStep {
   expectedAnswer: string;   // The expected keyword/answer
   successReply: string;     // Bot reply on success
   failureReply: string;     // Bot reply on failure (supports {input} placeholder)
+  warningMessage?: string;  // Custom warning message for WARNING_ONLY or BAN_DEVICE modes
 
   // New Fields
   mediaUrl?: string;        // For 'image' type
@@ -123,6 +144,18 @@ export interface ChatStep {
   options?: string[];       // For 'options' type (Quick Replies)
   inputRequired?: boolean;  // If false, treats as statement and auto-advances
   matchType?: 'exact' | 'contains'; // Validation strictness
+
+  // Flow Logic
+  nextStepId?: string;          // Default next step
+  failureNextStepId?: string;   // Step to go to on failure
+  branches?: {                  // For 'options' type: map option text to next step ID
+    label: string;
+    nextStepId: string;
+  }[];
+  position?: { x: number; y: number }; // For React Flow GUI
+  variable?: string;            // Variable name to store user answer (e.g. 'name' -> {name})
+  maxAttempts?: number;         // Max retries before ban (for WARNING_ONLY mode)
+  showGoogleLogin?: boolean;    // Show Google Login button
 }
 
 export interface WishItem {
