@@ -3,6 +3,7 @@ import HTMLFlipBook from 'react-pageflip';
 import { motion } from 'framer-motion';
 import { BookOpen, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { FlipbookPage } from '../types';
 import { getOptimizedImageUrl } from '../utils';
 
@@ -76,7 +77,9 @@ const FlipbookMediaItem: React.FC<{ page: FlipbookPage }> = ({ page }) => {
 };
 
 const Flipbook: React.FC = () => {
-    const { flipbookPages, setFlipbookPages, isAdmin } = useData();
+    const { flipbookPages, setFlipbookPages } = useData();
+    const { hasPermission } = useAuth();
+    const canEdit = hasPermission('canEditFlipbook');
     const [newPageUrl, setNewPageUrl] = useState('');
     const [newPageCaption, setNewPageCaption] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -131,7 +134,7 @@ const Flipbook: React.FC = () => {
             </motion.div>
 
             {/* ADMIN CONTROLS: ADD NEW */}
-            {isAdmin && (
+            {canEdit && (
                 <div className="mb-8 w-full max-w-lg">
                     <form onSubmit={handleAddPage} className="flex flex-col gap-2 p-4 bg-white rounded-xl shadow-lg border border-gray-200">
                         <h3 className="text-xs font-bold text-gray-500 uppercase">Add New Page</h3>
@@ -159,7 +162,7 @@ const Flipbook: React.FC = () => {
                 {flipbookPages.length === 0 ? (
                     <div className="w-[300px] h-[400px] md:w-[400px] md:h-[500px] bg-white flex items-center justify-center text-gray-400 flex-col gap-4 text-center p-8">
                         <p>The storybook is empty.</p>
-                        {!isAdmin && <p className="text-sm">Ask the admin to add some memories!</p>}
+                        {!canEdit && <p className="text-sm">Ask the admin to add some memories!</p>}
                     </div>
                 ) : (
                     <HTMLFlipBook
@@ -189,7 +192,7 @@ const Flipbook: React.FC = () => {
                         {/* DYNAMIC PAGES */}
                         {flipbookPages.map((page, index) => (
                             <Page key={page.id} number={index + 1}>
-                                {isAdmin && editingId === page.id ? (
+                                {canEdit && editingId === page.id ? (
                                     // EDIT MODE
                                     <div className="absolute inset-4 bg-white/90 backdrop-blur z-30 flex flex-col gap-2 justify-center p-4 border-2 border-dashed border-blue-300 rounded-lg">
                                         <h4 className="text-center font-bold text-gray-700">Editing Page {index + 1}</h4>
@@ -215,7 +218,7 @@ const Flipbook: React.FC = () => {
                                         )}
 
                                         {/* Admin Actions */}
-                                        {isAdmin && (
+                                        {canEdit && (
                                             <div className="absolute top-2 right-2 flex gap-1 z-20">
                                                 <button
                                                     onClick={() => startEdit(page)}

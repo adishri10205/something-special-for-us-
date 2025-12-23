@@ -91,9 +91,23 @@ export interface UserPermissions {
   canEditReels?: boolean;
   canEditMusic?: boolean;
   canEditNotes?: boolean;
+  canEditFlipbook?: boolean;
+  canEditVoiceNotes?: boolean;
   canViewVault?: boolean;
   canViewAdmin?: boolean;
   canViewMessages?: boolean;
+  canDeleteReels?: boolean;
+  canAddReels?: boolean;
+
+  // View Permissions
+  canViewJourney?: boolean;
+  canViewGallery?: boolean;
+  canViewReels?: boolean;
+  canViewVideos?: boolean;
+  canViewMusic?: boolean;
+  canViewNotes?: boolean;
+  canViewFlipbook?: boolean;
+  canViewVoiceNotes?: boolean;
 }
 
 export interface CardVisibility {

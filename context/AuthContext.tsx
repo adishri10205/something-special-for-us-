@@ -52,6 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return !!currentUser.customPermissions?.[permission];
     };
 
+    const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+
     useEffect(() => {
         let banUnsubscribe: (() => void) | undefined;
         const checkBanStatus = async () => {
@@ -101,68 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         checkBanStatus();
 
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            // ... existing auth logic ...
-            setLoading(true);
-            setAuthError('');
-            if (user) {
-                // Fetch dynamic admin list
-                let adminEmails = INITIAL_ADMIN_EMAILS;
-                try {
-                    const adminListRef = ref(db, 'settings/adminEmails');
-                    const adminSnapshot = await get(adminListRef);
-                    if (adminSnapshot.exists()) {
-                        adminEmails = adminSnapshot.val();
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch admin list", e);
-                }
-
-                const isAdminEmail = user.email && (Array.isArray(adminEmails) ? adminEmails.includes(user.email) : false);
-
-                const profile: UserProfile = {
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
-                    role: isAdminEmail ? 'admin' : 'user',
-                    status: 'online',
-                    lastSeen: new Date().toISOString()
-                };
-
-                // Sync to Realtime DB to allow Admin management
-                try {
-                    const userRef = ref(db, `users/${user.uid}`);
-                    // Only update fields, don't overwrite permissions if they exist
-                    // We fetch first to check existing permissions
-                    const snap = await get(userRef);
-                    if (snap.exists()) {
-                        const existing = snap.val();
-                        // Keep existing role/permissions if manually set in DB, unless it's a super-admin email check
-                        const mergedProfile = { ...profile, ...existing, lastSeen: new Date().toISOString() };
-                        // Force admin role if in hardcoded list, mostly for safety
-                        if (isAdminEmail) mergedProfile.role = 'admin';
-                        setCurrentUser(mergedProfile);
-                        await set(userRef, mergedProfile);
-                    } else {
-                        setCurrentUser(profile);
-                        await set(userRef, profile);
-                    }
-                } catch (e) {
-                    console.error("Failed to sync user profile", e);
-                    // Fallback to basic auth profile
-                    setCurrentUser({
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        role: isAdminEmail ? 'admin' : 'user'
-                    });
-                }
-            } else {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setFirebaseUser(user);
+            if (!user) {
                 setCurrentUser(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
         return () => {
@@ -170,6 +116,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (banUnsubscribe) banUnsubscribe();
         };
     }, []);
+
+    // Real-time User Profile Sync
+    useEffect(() => {
+        let userUnsubscribe: (() => void) | undefined;
+
+        const initUser = async () => {
+            if (!firebaseUser) return;
+            setLoading(true);
+
+            // Fetch dynamic admin list
+            let adminEmails = INITIAL_ADMIN_EMAILS;
+            try {
+                const adminListRef = ref(db, 'settings/adminEmails');
+                const adminSnapshot = await get(adminListRef);
+                if (adminSnapshot.exists()) {
+                    adminEmails = adminSnapshot.val();
+                }
+            } catch (e) {
+                console.error("Failed to fetch admin list", e);
+            }
+
+            const isAdminEmail = firebaseUser.email && (Array.isArray(adminEmails) ? adminEmails.includes(firebaseUser.email) : false);
+
+            const baseProfile: UserProfile = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                role: isAdminEmail ? 'admin' : 'user',
+                status: 'online',
+                lastSeen: new Date().toISOString()
+            };
+
+            const userRef = ref(db, `users/${firebaseUser.uid}`);
+
+            // 1. Initial Sync/Write (ensure profile exists)
+            try {
+                const snap = await get(userRef);
+                if (!snap.exists()) {
+                    await set(userRef, baseProfile);
+                } else {
+                    // Update lastSeen and essential auth info, but preserve DB roles/permissions
+                    const existing = snap.val();
+                    const mergedProfile = { ...baseProfile, ...existing, lastSeen: new Date().toISOString() };
+                    // Force admin if super-admin email
+                    if (isAdminEmail) mergedProfile.role = 'admin';
+                    await update(userRef, mergedProfile);
+                }
+            } catch (e) {
+                console.error("Profile sync failed", e);
+            }
+
+            // 2. Real-time Listener for Permissions/Role changes
+            userUnsubscribe = onValue(userRef, (snapshot) => {
+                const val = snapshot.val();
+                if (val) {
+                    // Always re-merge with base to ensure we have latest fields if DB is partial? 
+                    // Actually, DB should differ mostly in permissions.
+                    // Important: If admin demotes user in DB, this listener catches it.
+
+                    // Allow Email Check to override DB role if it's a super admin
+                    if (isAdminEmail) val.role = 'admin';
+
+                    setCurrentUser(val);
+                } else {
+                    setCurrentUser(baseProfile);
+                }
+                setLoading(false);
+            }, (error) => {
+                console.error("Realtime update failed", error);
+                setLoading(false);
+            });
+        };
+
+        if (firebaseUser) {
+            initUser();
+        } else {
+            setLoading(false);
+        }
+
+        return () => {
+            if (userUnsubscribe) userUnsubscribe();
+        };
+    }, [firebaseUser]);
 
     const banCurrentDevice = async (reason: string = 'Security Violation') => {
         try {

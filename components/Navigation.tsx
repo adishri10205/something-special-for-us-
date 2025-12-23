@@ -1,6 +1,6 @@
 import React, { useState } from 'react'; // Added useState
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic } from 'lucide-react'; // Added more icons
+import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus } from 'lucide-react'; // Added more icons
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
@@ -8,7 +8,7 @@ import { useHeader } from '../context/HeaderContext';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, lockApp, isAppLocked, currentUser } = useAuth();
+  const { logout, lockApp, isAppLocked, currentUser, isAdmin, hasPermission } = useAuth();
   const { title } = useHeader();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
@@ -19,16 +19,16 @@ const Navigation: React.FC = () => {
 
   const links = [
     { to: '/home', icon: Home, label: 'Home' },
-    { to: '/journey', icon: Heart, label: 'Journey' },
-    { to: '/gallery', icon: Image, label: 'Gallery' },
-    { to: '/reels', icon: Film, label: 'Reels' },
-    { to: '/videos', icon: Youtube, label: 'Videos' },
-    { to: '/music', icon: Music, label: 'Music' },
-    { to: '/notes', icon: MessageCircle, label: 'Notes' },
-    { to: '/vault', icon: Lock, label: 'Vault' },
-    { to: '/links', icon: Link2, label: 'Links' },
-    { to: '/flipbook', icon: Book, label: 'Storybook' },
-    { to: '/voice-notes', icon: Mic, label: 'Voice Notes' },
+    ...(hasPermission('canViewJourney') ? [{ to: '/journey', icon: Heart, label: 'Journey' }] : []),
+    ...(hasPermission('canViewGallery') ? [{ to: '/gallery', icon: Image, label: 'Gallery' }] : []),
+    ...(hasPermission('canViewReels') ? [{ to: '/reels', icon: Film, label: 'Reels' }] : []),
+    ...(hasPermission('canViewVideos') ? [{ to: '/videos', icon: Youtube, label: 'Videos' }] : []),
+    ...(hasPermission('canViewMusic') ? [{ to: '/music', icon: Music, label: 'Music' }] : []),
+    ...(hasPermission('canViewNotes') ? [{ to: '/notes', icon: MessageCircle, label: 'Notes' }] : []),
+    ...(hasPermission('canViewVault') ? [{ to: '/vault', icon: Lock, label: 'Vault' }] : []),
+    ...(hasPermission('canViewJourney') ? [{ to: '/links', icon: Link2, label: 'Links' }] : []), // Bundling Links with Journey for now as "Extras"
+    ...(hasPermission('canViewFlipbook') ? [{ to: '/flipbook', icon: Book, label: 'Storybook' }] : []),
+    ...(hasPermission('canViewVoiceNotes') ? [{ to: '/voice-notes', icon: Mic, label: 'Voice Notes' }] : []),
   ];
 
   return (
@@ -133,12 +133,18 @@ const Navigation: React.FC = () => {
         className="md:hidden fixed bottom-4 left-4 right-4 mx-auto max-w-md bg-white/80 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] z-50 px-2 py-3"
       >
         <div className="flex justify-around items-center w-full">
-          {/* Show Home, Gallery, Reels, Music (skip Videos at index 4) */}
-          {[links[0], links[2], links[3], links[5]].map((link) => {
+          {/* Show Priority Links for Mobile Bottom Bar (Home, Gallery, Reels, Music) */}
+          {links.filter(l => ['/home', '/gallery', '/reels', '/music'].includes(l.to)).map((link) => {
             return (
               <NavLink
                 key={link.to}
                 to={link.to}
+                onClick={(e) => {
+                  if (link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels'))) {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('open-add-reel-modal'));
+                  }
+                }}
                 className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300"
               >
                 {({ isActive }) => (
@@ -156,10 +162,16 @@ const Navigation: React.FC = () => {
                       className={`relative z-10 flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'text-white scale-105' : 'text-gray-500 hover:text-rose-400'
                         }`}
                     >
-                      <link.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                      {/* If on Reels page and this is the Reels link, show Plus icon, otherwise show original icon */}
+                      {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? (
+                        <Plus size={26} strokeWidth={3} />
+                      ) : (
+                        <link.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                      )}
+
                       <span className={`text-[10px] font-semibold tracking-wide ${isActive ? 'opacity-100' : 'opacity-70'
                         }`}>
-                        {link.label}
+                        {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? 'Add' : link.label}
                       </span>
                     </motion.div>
                   </>
@@ -181,11 +193,11 @@ const Navigation: React.FC = () => {
             </div>
           </motion.button>
         </div>
+
+        {/* Mobile FAB removed as per user request to integrate into nav bar */}
       </motion.nav>
 
-      {/* Top Left Button Removed */}
-
-      {/* Mobile Left Sidebar Overlay */}
+      {/* Mobile Slide Menu - Shows only pages user has permission to view */}
       <AnimatePresence>
         {
           isMobileMenuOpen && (
@@ -205,7 +217,7 @@ const Navigation: React.FC = () => {
                 initial={{ x: '-100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
-                transition={{ type: "spring", stiffness: 400, damping: 40, mass: 0.2 }} // Ultra snappy
+                transition={{ type: "spring", stiffness: 400, damping: 40, mass: 0.2 }}
                 className="md:hidden fixed top-0 left-0 h-full w-3/4 max-w-xs bg-white/95 backdrop-blur-2xl z-[70] shadow-2xl flex flex-col p-6 overflow-y-auto"
               >
                 <div className="flex justify-between items-center mb-8">
@@ -251,7 +263,7 @@ const Navigation: React.FC = () => {
             </>
           )
         }
-      </AnimatePresence >
+      </AnimatePresence>
       {/* Notifications Overlay (Moved to Root) */}
       <AnimatePresence>
         {isNotificationsOpen && (

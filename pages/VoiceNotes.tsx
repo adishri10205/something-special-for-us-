@@ -17,11 +17,11 @@ interface VoiceNoteItemProps {
     activeId: string | null;
     onPlay: (id: string) => void;
     onDelete: (id: string) => void;
-    isAdmin: boolean;
+    canEdit: boolean;
     getStreamUrl: (url: string) => string | null;
 }
 
-const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, onDelete, isAdmin, getStreamUrl }) => {
+const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, onDelete, canEdit, getStreamUrl }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -163,7 +163,7 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
                         >
                             <ExternalLink size={14} />
                         </a>
-                        {isAdmin && (
+                        {canEdit && (
                             <button
                                 onClick={() => onDelete(note.id)}
                                 className="text-gray-400 hover:text-red-500 transition-colors"
@@ -198,8 +198,9 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
 };
 
 const VoiceNotes: React.FC = () => {
-    const { voiceNotes, setVoiceNotes, isAdmin } = useData();
-    const { currentUser } = useAuth();
+    const { voiceNotes, setVoiceNotes } = useData();
+    const { currentUser, hasPermission } = useAuth();
+    const canEdit = hasPermission('canEditVoiceNotes');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Form State
@@ -264,7 +265,7 @@ const VoiceNotes: React.FC = () => {
                     <h2 className="text-4xl font-script text-gray-800">Voice Notes</h2>
                     <p className="text-gray-500 mt-2">Little echoes of our conversations 🎙️</p>
                 </div>
-                {isAdmin && (
+                {canEdit && (
                     <button
                         onClick={() => setIsAddModalOpen(true)}
                         className="p-3 bg-indigo-500 text-white rounded-full shadow-lg hover:bg-indigo-600 transition-transform hover:scale-105"
@@ -290,7 +291,7 @@ const VoiceNotes: React.FC = () => {
                         activeId={activeId}
                         onPlay={setActiveId}
                         onDelete={handleDelete}
-                        isAdmin={isAdmin}
+                        canEdit={canEdit}
                         getStreamUrl={getStreamUrl}
                     />
                 ))}

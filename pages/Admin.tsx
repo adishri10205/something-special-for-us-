@@ -7,13 +7,13 @@ import { ref, onValue, update, remove } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
 import ChatFlowBuilder from '../components/ChatFlowBuilder';
-import PermissionModal from '../components/PermissionModal';
 import MuxUploader from '../components/MuxUploader';
+import PermissionModal from '../components/PermissionModal';
 
 type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users';
 
@@ -506,7 +506,7 @@ const Admin: React.FC = () => {
               <>
                 <TabButton id="users" icon={Users} label="User Management" />
                 <TabButton id="settings" icon={PlayCircle} label="Startup Settings" />
-                <TabButton id="intro" icon={SparklesIcon} label="Intro Flow" />
+                <TabButton id="intro" icon={Sparkles} label="Intro Flow" />
                 <TabButton id="chat" icon={MessageCircle} label="Chat Flow" />
               </>
             )}
@@ -1289,7 +1289,7 @@ const Admin: React.FC = () => {
                             onClick={() => setPermissionUser(user)}
                             className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
                           >
-                            <Lock size={14} /> Manage Permissions
+                            <Lock size={14} /> Manage Access & Roles
                           </button>
                           <div className="mt-1 flex gap-1 flex-wrap">
                             {user.customPermissions?.canViewAdmin && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold">Admin Panel</span>}
@@ -2044,31 +2044,74 @@ const Admin: React.FC = () => {
               <button onClick={() => setPermissionUser(null)} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries({
-                canEditTimeline: 'Edit Timeline',
-                canEditGallery: 'Edit Gallery',
-                canEditReels: 'Edit Reels',
-                canEditMusic: 'Music Control',
-                canEditNotes: 'Moderate Notes',
-                canViewVault: 'Access Vault',
-                canViewAdmin: 'Access Admin',
-                canViewMessages: 'Access Mailbox'
-              }).map(([key, label]) => {
-                const permKey = key as keyof import('../types').UserPermissions;
-                const isEnabled = permissionUser.customPermissions?.[permKey] || false;
-                return (
-                  <div key={key} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}
-                    onClick={() => {
-                      const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
-                      setPermissionUser({ ...permissionUser, customPermissions: newPerms });
-                    }}
-                  >
-                    <span className={`font-bold ${isEnabled ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
-                    {isEnabled ? <Check size={20} className="text-blue-600" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-300" />}
-                  </div>
-                );
-              })}
+            {/* Visibility Permissions Section */}
+            <div className="mb-6">
+              <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
+                <Eye size={16} />
+                View Access (Visibility)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Object.entries({
+                  canViewTimeline: 'View Journey',
+                  canViewGallery: 'View Gallery',
+                  canViewReels: 'View Reels',
+                  canViewMusic: 'View Music',
+                  canViewNotes: 'View Notes',
+                  canViewMessages: 'View Messages',
+                  canViewVault: 'View Vault',
+                  canViewFlipbook: 'View Flipbook',
+                  canViewLinks: 'View Links',
+                  canViewVideos: 'View Videos',
+                  canViewVoiceNotes: 'View Voice Notes'
+                }).map(([key, label]) => {
+                  const permKey = key as keyof import('../types').UserPermissions;
+                  const isEnabled = permissionUser.customPermissions?.[permKey] || false;
+                  return (
+                    <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-200'}`}
+                      onClick={() => {
+                        const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
+                        setPermissionUser({ ...permissionUser, customPermissions: newPerms });
+                      }}
+                    >
+                      <span className={`text-sm font-bold ${isEnabled ? 'text-green-700' : 'text-gray-600'}`}>{label}</span>
+                      {isEnabled ? <Check size={18} className="text-green-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Edit & Access Permissions Section */}
+            <div>
+              <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
+                <Settings size={16} />
+                Edit & Access Permissions
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Object.entries({
+                  canEditTimeline: 'Edit Timeline',
+                  canEditGallery: 'Edit Gallery',
+                  canEditReels: 'Edit Reels',
+                  canEditMusic: 'Music Control',
+                  canEditNotes: 'Moderate Notes',
+                  canViewAdmin: 'Access Admin',
+                  canEditCards: 'Edit Home Cards'
+                }).map(([key, label]) => {
+                  const permKey = key as keyof import('../types').UserPermissions;
+                  const isEnabled = permissionUser.customPermissions?.[permKey] || false;
+                  return (
+                    <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}
+                      onClick={() => {
+                        const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
+                        setPermissionUser({ ...permissionUser, customPermissions: newPerms });
+                      }}
+                    >
+                      <span className={`text-sm font-bold ${isEnabled ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
+                      {isEnabled ? <Check size={18} className="text-blue-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-8 pt-4 border-t">

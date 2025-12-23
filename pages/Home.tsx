@@ -139,8 +139,28 @@ const Home: React.FC = () => {
     }
   }
 
-  // Filter cards based on visibility from Context
-  const visibleCards = cards.filter(card => cardVisibility[card.to] !== false);
+  // Filter cards based on visibility from Context AND User Permissions
+  const visibleCards = cards.filter(card => {
+    // 1. Check Global Visibilty
+    if (cardVisibility[card.to] === false) return false;
+
+    // 2. Check User Permission
+    // If user is Admin, hasPermission returns true automatically.
+    // If no user, hasPermission returns false.
+    switch (card.to) {
+      case '/journey': return hasPermission('canViewJourney');
+      case '/gallery': return hasPermission('canViewGallery');
+      case '/reels': return hasPermission('canViewReels');
+      case '/videos': return hasPermission('canViewVideos');
+      case '/music': return hasPermission('canViewMusic');
+      case '/notes': return hasPermission('canViewNotes');
+      case '/vault': return hasPermission('canViewVault');
+      case '/links': return hasPermission('canViewJourney'); // Bundle with Journey
+      case '/flipbook': return hasPermission('canViewFlipbook');
+      case '/voice-notes': return hasPermission('canViewVoiceNotes');
+      default: return true; // Other cards visible by default
+    }
+  });
 
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);

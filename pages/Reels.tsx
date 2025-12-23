@@ -9,9 +9,10 @@ import { createMuxUpload, uploadFileToMux, getMuxUploadStatus, getMuxAsset } fro
 import { Reel } from '../types';
 
 const Reels: React.FC = () => {
-  const { reelsData, setReelsData, isAdmin } = useData();
-  const { hasPermission, currentUser } = useAuth();
+  const { reelsData, setReelsData } = useData();
+  const { hasPermission, currentUser, isAdmin } = useAuth();
   const canEdit = isAdmin || hasPermission('canEditReels');
+  const canDelete = isAdmin || hasPermission('canDeleteReels');
   const [editingItem, setEditingItem] = useState<any>(null);
 
   // Navigation / Scroll State
@@ -31,6 +32,15 @@ const Reels: React.FC = () => {
 
   // Audio State
   const [isMuted, setIsMuted] = useState(true);
+
+  // Listen for external "Adding Reel" trigger (from Mobile Navigation FAB)
+  useEffect(() => {
+    const handleOpenModal = () => {
+      if (canEdit) setIsUploadModalOpen(true);
+    };
+    window.addEventListener('open-add-reel-modal', handleOpenModal);
+    return () => window.removeEventListener('open-add-reel-modal', handleOpenModal);
+  }, [canEdit]);
 
   // --- HELPERS ---
   const extractDriveId = (url: string) => {
@@ -401,14 +411,18 @@ const Reels: React.FC = () => {
               </button>
 
               {/* Admin Controls */}
-              {canEdit && (
+              {(canEdit || canDelete) && (
                 <div className="absolute top-16 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
-                  <button onClick={() => setEditingItem(reel)} className="bg-blue-600/80 p-2 rounded-full text-white hover:bg-blue-600 backdrop-blur-md shadow-md">
-                    <Edit size={20} />
-                  </button>
-                  <button onClick={() => handleDelete(reel.id)} className="bg-red-600/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-md">
-                    <Trash2 size={20} />
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => setEditingItem(reel)} className="bg-blue-600/80 p-2 rounded-full text-white hover:bg-blue-600 backdrop-blur-md shadow-md">
+                      <Edit size={20} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={() => handleDelete(reel.id)} className="bg-red-600/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-md">
+                      <Trash2 size={20} />
+                    </button>
+                  )}
                 </div>
               )}
 
