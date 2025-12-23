@@ -5,11 +5,12 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Heart, Share2, MoreHorizontal, Edit, Trash2, Plus, X, Video, Link as LinkIcon, Play, Loader2, Volume2, VolumeX, Instagram, MessageCircle, Send, Music } from 'lucide-react';
 import EditModal from '../components/EditModal';
+import { createMuxUpload, uploadFileToMux, getMuxUploadStatus, getMuxAsset } from '../src/services/muxService';
 import { Reel } from '../types';
 
 const Reels: React.FC = () => {
   const { reelsData, setReelsData, isAdmin } = useData();
-  const { hasPermission } = useAuth();
+  const { hasPermission, currentUser } = useAuth();
   const canEdit = isAdmin || hasPermission('canEditReels');
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -20,7 +21,13 @@ const Reels: React.FC = () => {
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadTitle, setUploadTitle] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadMode, setUploadMode] = useState<'link' | 'file'>('link');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState('');
 
   // Audio State
   const [isMuted, setIsMuted] = useState(true);
@@ -92,11 +99,14 @@ const Reels: React.FC = () => {
         videoUrl: `https://www.instagram.com/reel/${instaId}/embed`,
         thumbnail: '',
         caption: uploadCaption,
-        likes: 0
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
       };
       setReelsData([newReel, ...reelsData]);
       setIsUploadModalOpen(false);
       setUploadUrl('');
+      setUploadTitle('');
       setUploadCaption('');
       return;
     }
@@ -109,11 +119,14 @@ const Reels: React.FC = () => {
         videoUrl: `https://drive.google.com/uc?export=download&id=${driveId}`,
         thumbnail: `https://lh3.googleusercontent.com/d/${driveId}=w400-h400`,
         caption: uploadCaption,
-        likes: 0
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
       };
       setReelsData([newReel, ...reelsData]);
       setIsUploadModalOpen(false);
       setUploadUrl('');
+      setUploadTitle('');
       setUploadCaption('');
       return;
     }
@@ -126,11 +139,14 @@ const Reels: React.FC = () => {
         videoUrl: `https://www.youtube.com/embed/${shortsId}`,
         thumbnail: `https://img.youtube.com/vi/${shortsId}/0.jpg`,
         caption: uploadCaption,
-        likes: 0
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
       };
       setReelsData([newReel, ...reelsData]);
       setIsUploadModalOpen(false);
       setUploadUrl('');
+      setUploadTitle('');
       setUploadCaption('');
       return;
     }
@@ -143,11 +159,14 @@ const Reels: React.FC = () => {
         videoUrl: `https://stream.mux.com/${muxId}.m3u8`,
         thumbnail: `https://image.mux.com/${muxId}/thumbnail.png`,
         caption: uploadCaption,
-        likes: 0
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
       };
       setReelsData([newReel, ...reelsData]);
       setIsUploadModalOpen(false);
       setUploadUrl('');
+      setUploadTitle('');
       setUploadCaption('');
       return;
     }
@@ -159,16 +178,98 @@ const Reels: React.FC = () => {
         videoUrl: uploadUrl,
         thumbnail: '', // No thumbnail for direct URLs
         caption: uploadCaption,
-        likes: 0
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
       };
       setReelsData([newReel, ...reelsData]);
       setIsUploadModalOpen(false);
       setUploadUrl('');
+      setUploadTitle('');
       setUploadCaption('');
       return;
     }
 
     alert("Invalid Link. Supported formats:\n• Instagram Reel URLs\n• Google Drive video links\n• YouTube Shorts URLs\n• Mux playback IDs or stream URLs\n• Direct video URLs (.mp4, .webm, .mov, .m3u8)");
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setIsUploading(true);
+      setUploadStatusText('Initializing upload...');
+
+      // 1. Create Upload URL
+      const { uploadId, uploadUrl } = await createMuxUpload();
+
+      // 2. Upload File
+      setUploadStatusText('Uploading video...');
+      await uploadFileToMux(uploadUrl, selectedFile, (percent) => {
+        setUploadProgress(percent);
+      });
+
+      // 3. Poll for Asset Creation
+      setUploadStatusText('Processing...');
+      let assetId = null;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 * 2s = 120s timeout
+
+      while (!assetId && attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 2000));
+        const status = await getMuxUploadStatus(uploadId);
+
+        if (status.status === 'asset_created') {
+          assetId = status.asset_id;
+        } else if (status.status === 'errored') {
+          throw new Error(status.error?.message || 'Upload processing failed');
+        }
+        attempts++;
+      }
+
+      if (!assetId) throw new Error('Timeout waiting for asset creation');
+
+      // 4. Get Playback ID
+      setUploadStatusText('Finalizing...');
+      const asset = await getMuxAsset(assetId);
+      const playbackId = asset.playback_ids?.find((p: any) => p.policy === 'public')?.id;
+
+      if (!playbackId) throw new Error('No public playback ID found');
+
+      // 5. Create Reel
+      const newReel: Reel = {
+        id: `reel-${Date.now()}`,
+        videoUrl: `https://stream.mux.com/${playbackId}.m3u8`,
+        thumbnail: `https://image.mux.com/${playbackId}/thumbnail.png`,
+        caption: uploadCaption,
+        likes: 0,
+        title: uploadTitle,
+        uploadedBy: currentUser?.displayName || 'Anonymous'
+      };
+
+      setReelsData([newReel, ...reelsData]);
+      handleCloseUploadModal();
+
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      setUploadStatusText('');
+      setUploadProgress(0);
+    }
+  };
+
+  const handleCloseUploadModal = () => {
+    setIsUploadModalOpen(false);
+    setUploadUrl('');
+    setUploadCaption('');
+    setUploadTitle('');
+    setSelectedFile(null);
+    setUploadProgress(0);
+    setIsUploading(false);
+    setUploadMode('link');
+    setUploadStatusText('');
   };
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -178,7 +279,7 @@ const Reels: React.FC = () => {
 
 
   return (
-    <div className="h-screen w-full flex items-center justify-center md:p-4 md:pb-4 overflow-hidden relative bg-black md:bg-black/5">
+    <div className="h-[100dvh] w-full flex items-center justify-center md:h-screen md:p-4 md:pb-4 overflow-hidden relative bg-black md:bg-black/5">
       {/* Full screen on mobile, centered with padding on desktop */}
 
       {/* HEADER ACTIONS (ADMIN) - Hidden on mobile to avoid conflict with bottom menu */}
@@ -197,8 +298,7 @@ const Reels: React.FC = () => {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="h-full w-full md:w-auto md:h-[90vh] md:aspect-[9/16] overflow-y-auto snap-y snap-mandatory no-scrollbar md:rounded-2xl md:shadow-2xl md:border-4 md:border-white/20 bg-black scroll-smooth pb-24 md:pb-0"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 100px)' }}
+        className="h-full w-full md:w-auto md:h-[90vh] md:aspect-[9/16] overflow-y-auto snap-y snap-mandatory no-scrollbar md:rounded-2xl md:shadow-2xl md:border-4 md:border-white/20 bg-black scroll-smooth pb-20 md:pb-0"
       >
         {reelsData.map((reel, index) => {
           const isActive = index === activeIndex;
@@ -314,21 +414,31 @@ const Reels: React.FC = () => {
 
               {/* Overlay UI - Instagram Style */}
               {!isInstagram && (
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-transparent via-black/30 to-black/80 flex flex-col justify-end p-5 pb-32 md:pb-6 pointer-events-none z-20">
-                  {/* Caption Section */}
-                  <div className="text-white space-y-2 pointer-events-auto">
-                    {reel.title && (
-                      <h3 className="text-base font-bold drop-shadow-lg">
-                        {reel.title}
-                      </h3>
-                    )}
-                    {reel.caption && (
-                      <p className="text-sm font-normal leading-relaxed drop-shadow-md line-clamp-2">
-                        {reel.caption}
-                      </p>
-                    )}
+                <>
+                  {/* Top Gradient for Status Bar visibility - Reduced */}
+                  <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-20" />
+
+                  {/* Bottom Text Overlay - Reduced blackness */}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-5 pb-12 md:pb-6 pointer-events-none z-20">
+                    <div className="text-white space-y-2 pointer-events-auto">
+                      {reel.uploadedBy && (
+                        <p className="text-xs text-rose-400 font-medium drop-shadow-md mb-1">
+                          @{reel.uploadedBy}
+                        </p>
+                      )}
+                      {reel.title && (
+                        <h3 className="text-base font-bold drop-shadow-lg leading-tight">
+                          {reel.title}
+                        </h3>
+                      )}
+                      {reel.caption && (
+                        <p className="text-sm font-normal leading-relaxed drop-shadow-md line-clamp-2 text-gray-100">
+                          {reel.caption}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           );
@@ -340,6 +450,9 @@ const Reels: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Mask for Bottom Navigation Area to hide next/prev reels peeking through */}
+      <div className="md:hidden absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black via-black/90 to-transparent z-10 pointer-events-none" />
 
       <EditModal
         isOpen={!!editingItem}
@@ -357,7 +470,7 @@ const Reels: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setIsUploadModalOpen(false)}
+            onClick={!isUploading ? handleCloseUploadModal : undefined}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -367,28 +480,93 @@ const Reels: React.FC = () => {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-white">Add Reel Link</h3>
-                <button onClick={() => setIsUploadModalOpen(false)} className="text-zinc-400 hover:text-white">
-                  <X size={24} />
+                <h3 className="text-xl font-bold text-white">Add Reel</h3>
+                {!isUploading && (
+                  <button onClick={handleCloseUploadModal} className="text-zinc-400 hover:text-white">
+                    <X size={24} />
+                  </button>
+                )}
+              </div>
+
+              {/* Mode Toggle */}
+              <div className="flex p-1 bg-zinc-800 rounded-lg mb-6">
+                <button
+                  onClick={() => setUploadMode('link')}
+                  disabled={isUploading}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${uploadMode === 'link' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  Link URL
+                </button>
+                <button
+                  onClick={() => setUploadMode('file')}
+                  disabled={isUploading}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${uploadMode === 'file' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  Upload File (Mux)
                 </button>
               </div>
 
               {/* URL Input */}
-              <div className="mb-4">
-                <label className="text-xs font-medium text-zinc-400 mb-1 block">Video Link (Drive / Insta)</label>
-                <div className="flex items-center bg-zinc-800 rounded-lg px-3 border border-zinc-700 focus-within:ring-2 focus-within:ring-rose-500">
-                  <LinkIcon size={18} className="text-zinc-500 mr-2" />
-                  <input
-                    type="text"
-                    value={uploadUrl}
-                    onChange={(e) => setUploadUrl(e.target.value)}
-                    placeholder="Paste link here..."
-                    className="w-full bg-transparent text-white py-3 outline-none text-sm"
-                  />
+              {uploadMode === 'link' && (
+                <div className="mb-4">
+                  <label className="text-xs font-medium text-zinc-400 mb-1 block">Video Link (Drive / Insta)</label>
+                  <div className="flex items-center bg-zinc-800 rounded-lg px-3 border border-zinc-700 focus-within:ring-2 focus-within:ring-rose-500">
+                    <LinkIcon size={18} className="text-zinc-500 mr-2" />
+                    <input
+                      type="text"
+                      value={uploadUrl}
+                      onChange={(e) => setUploadUrl(e.target.value)}
+                      placeholder="Paste link here..."
+                      className="w-full bg-transparent text-white py-3 outline-none text-sm"
+                    />
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2">
+                    * Supports Drive (anyone w/ link) or Instagram Reels.
+                  </p>
                 </div>
-                <p className="text-[10px] text-zinc-500 mt-2">
-                  * Supports Drive (anyone w/ link) or Instagram Reels.
-                </p>
+              )}
+
+              {/* File Upload Input */}
+              {uploadMode === 'file' && (
+                <div className="mb-4">
+                  <label className="text-xs font-medium text-zinc-400 mb-1 block">Select Video File</label>
+                  <div className={`border-2 border-dashed border-zinc-700 rounded-xl p-8 flex flex-col items-center justify-center gap-2 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="video-upload"
+                    />
+                    <label htmlFor="video-upload" className="flex flex-col items-center cursor-pointer w-full h-full">
+                      {selectedFile ? (
+                        <>
+                          <Video size={32} className="text-rose-500 mb-2" />
+                          <span className="text-sm text-white font-medium text-center break-all">{selectedFile.name}</span>
+                          <span className="text-xs text-zinc-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                        </>
+                      ) : (
+                        <>
+                          <Video size={32} className="mb-2" />
+                          <span className="text-sm font-medium">Click to upload video</span>
+                          <span className="text-xs">MP4, MOV, WEBM</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              )}
+
+
+              <div className="mb-4">
+                <label className="text-xs font-medium text-zinc-400 mb-1 block">Title</label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder="Give your reel a title..."
+                  className="w-full bg-zinc-800 border-zinc-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-rose-500 outline-none"
+                />
               </div>
 
               {/* Caption */}
@@ -403,13 +581,33 @@ const Reels: React.FC = () => {
                 />
               </div>
 
+              {/* Progress Bar (Only during upload) */}
+              {isUploading && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>{uploadStatusText}</span>
+                    <span>{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-rose-600 h-full transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
-                onClick={handleAddReel}
-                disabled={!uploadUrl}
+                onClick={uploadMode === 'link' ? handleAddReel : handleFileUpload}
+                disabled={(uploadMode === 'link' && !uploadUrl) || (uploadMode === 'file' && !selectedFile) || isUploading}
                 className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Plus size={20} />
-                Add Reel
+                {isUploading ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <Plus size={20} />
+                )}
+                {isUploading ? 'Uploading...' : 'Add Reel'}
               </button>
 
             </motion.div>

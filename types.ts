@@ -24,6 +24,8 @@ export interface Reel {
   thumbnail: string;
   caption: string;
   likes: number;
+  title?: string;
+  uploadedBy?: string;
 }
 
 export interface Track {
