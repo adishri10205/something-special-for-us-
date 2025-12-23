@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MuxPlayer from '@mux/mux-player-react';
-import * as UpChunk from '@mux/upchunk';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Trash2, Mic, Play, Pause, ExternalLink, Upload, Loader2, Music as MusicIcon, Link as LinkIcon } from 'lucide-react';
+import { Plus, X, Trash2, Mic, Play, Pause, ExternalLink } from 'lucide-react';
 import { VoiceNote } from '../types';
-import { createMuxUpload, getMuxAsset, getMuxUploadStatus } from '../src/services/muxService';
 
 const formatTime = (seconds: number) => {
     if (!seconds) return "0:00";
@@ -25,16 +22,14 @@ interface VoiceNoteItemProps {
 }
 
 const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, onDelete, canEdit, getStreamUrl }) => {
-    // Custom Player State (Legacy Drive Link)
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
     const isCurrent = activeId === note.id;
-    const directUrl = note.url ? getStreamUrl(note.url) : null;
+    const directUrl = getStreamUrl(note.url);
 
-    // --- Legacy Player Logic ---
     useEffect(() => {
         if (!isCurrent && isPlaying) {
             setIsPlaying(false);
@@ -50,6 +45,11 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
             setIsPlaying(false);
         } else {
             onPlay(note.id);
+            // Wait for parent to update activeId, then this effect might not trigger play immediately 
+            // but the next render with isCurrent=true will allow us to play if we trigger it.
+            // Actually, better to just play if isCurrent matches, or set local state.
+            // Simpler: If we are already current, just play. If not, parent switches us to current.
+            // We need to react to isCurrent changing to true? No, easier to just handle click.
             if (audioRef.current) {
                 audioRef.current.play()
                     .then(() => setIsPlaying(true))
@@ -57,6 +57,16 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
             }
         }
     };
+
+    // Effect to play when becoming active is tricky if we don't track "shouldPlay".
+    // For now, let's just let the click handler handle the play call directly for the newly active item.
+    // But since `onPlay` updates state in parent, we might re-render.
+
+    // Improved Logic:
+    // Parent keeps track of WHO is the active ID.
+    // If activeId !== note.id, we MUST pause.
+    // If activeId === note.id, we are ALLOWED to play, but user might have just paused us.
+    // So `isPlaying` state is local.
 
     const handleTimeUpdate = () => {
         if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
@@ -66,9 +76,10 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
         if (audioRef.current) {
             setDuration(audioRef.current.duration);
             if (duration === Infinity) {
+                // Initial infinity fix for some streams
                 audioRef.current.currentTime = 1e101;
                 audioRef.current.ontimeupdate = () => {
-                    audioRef.current!.ontimeupdate = () => handleTimeUpdate();
+                    audioRef.current!.ontimeupdate = () => handleTimeUpdate(); // restore normal handler
                     audioRef.current!.currentTime = 0;
                     setDuration(audioRef.current!.duration);
                 }
@@ -76,148 +87,95 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
         }
     };
 
-    const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!audioRef.current || !duration) return;
-
-        const bar = e.currentTarget;
-        const rect = bar.getBoundingClientRect();
-        const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-
-        audioRef.current.currentTime = percent * duration;
-        setCurrentTime(percent * duration);
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const time = Number(e.target.value);
+        if (audioRef.current) {
+            audioRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
     };
 
+    // Fix: When parent switches activeId to THIS note, we want to auto-play ONLY if it was triggered by user click on THIS note.
+    // The `togglePlay` handles the user interaction. 
+
     useEffect(() => {
+        // If we became NOT active, pause.
         if (!isCurrent && audioRef.current) {
             audioRef.current.pause();
             setIsPlaying(false);
         }
     }, [isCurrent]);
 
-    // --- Render ---
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -2 }}
-            className="group relative bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-xl border border-white/50 overflow-hidden hover:shadow-2xl transition-all duration-300"
+            className={`bg-white rounded-2xl p-5 shadow-sm border transition-all ${isCurrent ? 'border-indigo-500 ring-1 ring-indigo-500 shadow-md' : 'border-gray-100 hover:border-gray-200'}`}
         >
-            {/* Decorative Gradient Bar */}
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={togglePlay}
+                    className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center transition-colors shadow-sm ${isCurrent && isPlaying ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                    {isCurrent && isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+                </button>
 
-            <div className="flex items-center gap-4 relative z-10">
-                {/* Icon */}
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-50 flex items-center justify-center shadow-inner border border-white">
-                    {note.muxPlaybackId ? (
-                        <MusicIcon size={24} className="text-fuchsia-600 drop-shadow-sm" />
-                    ) : (
-                        <Mic size={24} className="text-violet-600 drop-shadow-sm" />
-                    )}
-                </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-800 truncate text-lg leading-tight">{note.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] uppercase font-bold tracking-wider ${note.createdBy === 'Aditya' ? 'text-blue-500' : (note.createdBy === 'Shruti' ? 'text-pink-500' : 'text-gray-500')}`}>
-                            {note.createdBy}
-                        </span>
-                        <span className="text-[10px] text-gray-400 font-medium">• {note.createdAt}</span>
+                    <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-gray-800 truncate pr-2">{note.title}</h3>
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap">{note.createdAt}</span>
                     </div>
-                </div>
 
-                {/* Actions (Absolute Top Right on Hover, or Inline) */}
-                <div className="flex items-center gap-2">
-                    {/* External Link */}
-                    {note.url && (
+                    <div className="mt-2 w-full">
+                        {/* Progress Bar */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-gray-500">{formatTime(currentTime)}</span>
+                            <div className="relative flex-1 h-1 bg-gray-100 rounded-full">
+                                <div
+                                    className="absolute left-0 top-0 bottom-0 bg-indigo-500 rounded-full transition-all duration-100"
+                                    style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                                />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={duration || 0}
+                                    value={currentTime}
+                                    onChange={handleSeek}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                                />
+                            </div>
+                            <span className="text-[10px] font-mono text-gray-500">{formatTime(duration)}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                        {note.createdBy && (
+                            <span className={`${note.createdBy === 'Aditya' ? 'text-blue-500' : 'text-rose-500'} font-medium flex items-center gap-1`}>
+                                {note.createdBy === 'Aditya' ? '👦' : (note.createdBy === 'Shruti' ? '👧' : '🛡️')} {note.createdBy}
+                            </span>
+                        )}
                         <a
                             href={note.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
-                            title="Open Link"
+                            className="ml-auto text-gray-400 hover:text-indigo-500 transition-colors"
+                            title="Open Drive Link"
                         >
                             <ExternalLink size={14} />
                         </a>
-                    )}
-
-                    {/* Play Button (Only for Drive Links since Mux has its own) */}
-                    {!note.muxPlaybackId && (
-                        <button
-                            onClick={togglePlay}
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 ${isCurrent && isPlaying
-                                ? 'bg-gray-900 text-white'
-                                : 'bg-gray-900 text-white hover:bg-black'
-                                }`}
-                        >
-                            {isCurrent && isPlaying ? (
-                                <Pause size={20} fill="currentColor" className="text-fuchsia-100" />
-                            ) : (
-                                <Play size={20} fill="currentColor" className="ml-1 text-fuchsia-100" />
-                            )}
-                        </button>
-                    )}
-
-                    {/* Delete Action (Top right absolute) */}
-                    {canEdit && (
-                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canEdit && (
                             <button
                                 onClick={() => onDelete(note.id)}
-                                className="p-2 bg-white/90 backdrop-blur text-red-500 hover:bg-red-50 rounded-full shadow-sm"
-                                title="Delete"
+                                className="text-gray-400 hover:text-red-500 transition-colors"
                             >
                                 <Trash2 size={14} />
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Bottom Section: Progress Bar or Mux Player */}
-            <div className="mt-5">
-                {note.muxPlaybackId ? (
-                    <div className="rounded-xl overflow-hidden shadow-sm border border-fuchsia-100/50">
-                        <MuxPlayer
-                            streamType="on-demand"
-                            playbackId={note.muxPlaybackId}
-                            audio
-                            style={{
-                                height: '48px',
-                                width: '100%',
-                                '--media-primary-color': '#d946ef',
-                                '--media-secondary-color': '#ffffff',
-                                '--media-control-bar-height': '48px',
-                                '--media-font-family': 'inherit',
-                            } as React.CSSProperties}
-                            primaryColor="#d946ef"
-                            secondaryColor="#ffffff"
-                        />
-                    </div>
-                ) : (
-                    /* Legacy Player Custom Progress Bar */
-                    <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-gray-400 font-medium font-mono min-w-[32px] text-right">{formatTime(currentTime)}</span>
-
-                        <div
-                            className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden relative group/slider cursor-pointer"
-                            onClick={handleSeek}
-                        >
-                            <div className="absolute inset-0 bg-gray-200 opacity-0 group-hover/slider:opacity-50 transition-opacity" />
-                            <div
-                                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full relative transition-all duration-100 ease-linear"
-                                style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
-                            >
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover/slider:opacity-100 transition-opacity translate-x-1" />
-                            </div>
-                        </div>
-
-                        <span className="text-[10px] text-gray-400 font-medium font-mono min-w-[32px]">{formatTime(duration)}</span>
-                    </div>
-                )}
-            </div>
-
-            {directUrl && !note.muxPlaybackId && (
+            {directUrl && (
                 <audio
                     ref={audioRef}
                     src={directUrl}
@@ -231,6 +189,7 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({ note, activeId, onPlay, o
                     onError={(e) => {
                         console.error("Audio playback error:", e);
                         setIsPlaying(false);
+                        alert("Could not play audio. Please check if the Google Drive link is valid and public.");
                     }}
                 />
             )}
@@ -245,17 +204,10 @@ const VoiceNotes: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Form State
-    const [uploadMode, setUploadMode] = useState<'file' | 'link' | 'mux_id'>('file');
     const [title, setTitle] = useState('');
     const [driveLink, setDriveLink] = useState('');
-    const [muxIdInput, setMuxIdInput] = useState('');
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    // Upload State
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [processingStatus, setProcessingStatus] = useState<'idle' | 'uploading' | 'processing' | 'ready' | 'error'>('idle');
-
+    // Playback State
     const [activeId, setActiveId] = useState<string | null>(null);
 
     // Identity Logic
@@ -271,175 +223,31 @@ const VoiceNotes: React.FC = () => {
 
     const getStreamUrl = (url: string) => {
         const id = extractDriveId(url);
+        // Matches user's exact "Working" request format
         return id ? `https://drive.google.com/uc?export=download&id=${id}` : null;
     };
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
-        }
-    };
+    const handleAddNote = () => {
+        if (!title || !driveLink) return;
 
-    const pollProcessing = async (uploadId: string, initialAssetId: string | undefined, noteTitle: string) => {
-        setProcessingStatus('processing');
-        console.log("Switching to processing state. Upload ID:", uploadId, "Initial Asset ID:", initialAssetId);
-
-        const maxAttempts = 60; // 3 minutes timeout
-        let attempts = 0;
-        let currentAssetId = initialAssetId;
-
-        const interval = setInterval(async () => {
-            attempts++;
-            console.log(`Polling attempt ${attempts}... Current Asset ID: ${currentAssetId || 'Not found yet'}`);
-
-            try {
-                // Stage 1: Get Asset ID if we don't have it yet
-                if (!currentAssetId) {
-                    const uploadStatus = await getMuxUploadStatus(uploadId);
-                    console.log("Mux Upload Status:", uploadStatus);
-
-                    if (uploadStatus.asset_id) {
-                        currentAssetId = uploadStatus.asset_id;
-                        console.log("Asset ID found:", currentAssetId);
-                    } else if (attempts > maxAttempts) {
-                        clearInterval(interval);
-                        setProcessingStatus('error');
-                        console.error("Timed out waiting for Asset ID to appear in upload status.");
-                        alert("Timed out waiting for Asset ID.");
-                        return;
-                    }
-                }
-
-                // Stage 2: Poll Asset for Readiness
-                if (currentAssetId) {
-                    const asset = await getMuxAsset(currentAssetId);
-                    console.log("Mux Asset Status:", asset.status, asset);
-
-                    if (asset.status === 'ready' && asset.playback_ids?.[0]) {
-                        clearInterval(interval);
-                        setProcessingStatus('ready');
-                        console.log("Asset ready! Creating voice note.");
-
-                        // Create Note
-                        const newNote: VoiceNote = {
-                            id: `vn-${Date.now()}`,
-                            title: noteTitle,
-                            muxPlaybackId: asset.playback_ids[0].id,
-                            muxAssetId: currentAssetId,
-                            duration: asset.duration,
-                            createdAt: new Date().toLocaleDateString(),
-                            createdBy: authorName
-                        };
-                        setVoiceNotes(prev => [newNote, ...prev]);
-                        resetForm();
-                    } else if (asset.status === 'errored') {
-                        clearInterval(interval);
-                        setProcessingStatus('error');
-                        console.error("Asset processing failed:", asset.errors);
-                        alert("Media processing failed.");
-                    }
-                }
-            } catch (e) {
-                console.error("Polling error in attempt " + attempts, e);
-            }
-
-            if (attempts > maxAttempts * 2) {
-                clearInterval(interval);
-                setProcessingStatus('error');
-                console.error("Global polling timeout reached.");
-                alert("Processing timed out.");
-            }
-        }, 3000);
-    };
-
-    const handleUpload = async () => {
-        if (!title) return;
-
-        if (uploadMode === 'mux_id') {
-            if (!muxIdInput) return;
-
-            const newNote: VoiceNote = {
-                id: `vn-${Date.now()}`,
-                title,
-                muxPlaybackId: muxIdInput,
-                createdAt: new Date().toLocaleDateString(),
-                createdBy: authorName
-            };
-            setVoiceNotes([newNote, ...voiceNotes]);
-            resetForm();
+        const streamUrl = getStreamUrl(driveLink);
+        if (!streamUrl) {
+            alert("Please enter a valid Google Drive Link");
             return;
         }
 
-        if (uploadMode === 'link') {
-            if (!driveLink) return;
-            const streamUrl = getStreamUrl(driveLink);
-            if (!streamUrl) {
-                alert("Please enter a valid Google Drive Link");
-                return;
-            }
-            const newNote: VoiceNote = {
-                id: `vn-${Date.now()}`,
-                title,
-                url: driveLink,
-                createdAt: new Date().toLocaleDateString(),
-                createdBy: authorName
-            };
-            setVoiceNotes([newNote, ...voiceNotes]);
-            resetForm();
-            return;
-        }
+        const newNote: VoiceNote = {
+            id: `vn-${Date.now()}`,
+            title,
+            url: driveLink,
+            createdAt: new Date().toLocaleDateString(),
+            createdBy: authorName
+        };
 
-        // Mux Upload
-        if (!selectedFile) return;
-        setIsUploading(true);
-        setProcessingStatus('uploading');
-
-        try {
-            const finalTitle = (title || selectedFile.name) + " - Voice Note";
-            const { uploadUrl, assetId, uploadId } = await createMuxUpload({ audioOnly: true, title: finalTitle });
-
-            // Note: assetId might be undefined initially for direct uploads, which is fine.
-            // We will fetch it during polling if needed.
-
-            const upload = UpChunk.createUpload({
-                endpoint: uploadUrl,
-                file: selectedFile,
-                chunkSize: 5120, // 5MB
-            });
-
-            upload.on('progress', (progress) => {
-                setUploadProgress(progress.detail);
-            });
-
-            upload.on('success', () => {
-                setUploadProgress(100);
-                pollProcessing(uploadId, assetId, title);
-            });
-
-            upload.on('error', (err) => {
-                setIsUploading(false);
-                setProcessingStatus('error');
-                console.error(err);
-                alert("Upload failed.");
-            });
-
-        } catch (e: any) {
-            console.error("Upload Error:", e);
-            setIsUploading(false);
-            setProcessingStatus('error');
-            alert(`Failed to create upload session: ${e.message || 'Unknown error'}`);
-        }
-    };
-
-    const resetForm = () => {
-        setIsAddModalOpen(false);
+        setVoiceNotes([...voiceNotes, newNote]);
         setTitle('');
         setDriveLink('');
-        setMuxIdInput('');
-        setSelectedFile(null);
-        setIsUploading(false);
-        setUploadProgress(0);
-        setProcessingStatus('idle');
+        setIsAddModalOpen(false);
     };
 
     const handleDelete = (id: string) => {
@@ -447,15 +255,6 @@ const VoiceNotes: React.FC = () => {
             setVoiceNotes(voiceNotes.filter(n => n.id !== id));
             if (activeId === id) setActiveId(null);
         }
-    };
-
-    const isFormValid = () => {
-        if (!title) return false;
-        if (isUploading) return false;
-        if (uploadMode === 'file') return !!selectedFile;
-        if (uploadMode === 'link') return !!driveLink;
-        if (uploadMode === 'mux_id') return !!muxIdInput;
-        return false;
     };
 
     return (
@@ -506,7 +305,7 @@ const VoiceNotes: React.FC = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-                        onClick={() => !isUploading && resetForm()}
+                        onClick={() => setIsAddModalOpen(false)}
                     >
                         <motion.div
                             initial={{ scale: 0.95 }}
@@ -517,11 +316,9 @@ const VoiceNotes: React.FC = () => {
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xl font-bold text-gray-800">New Voice Note</h3>
-                                {!isUploading && (
-                                    <button onClick={resetForm}>
-                                        <X size={24} className="text-gray-400" />
-                                    </button>
-                                )}
+                                <button onClick={() => setIsAddModalOpen(false)}>
+                                    <X size={24} className="text-gray-400" />
+                                </button>
                             </div>
 
                             <div className="space-y-4">
@@ -533,120 +330,26 @@ const VoiceNotes: React.FC = () => {
                                         onChange={e => setTitle(e.target.value)}
                                         className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
                                         placeholder="e.g. Late night thoughts..."
-                                        disabled={isUploading}
                                     />
                                 </div>
-
-                                {/* Tabs */}
-                                <div className="bg-gray-100 p-1 rounded-xl flex mb-4">
-                                    <button
-                                        onClick={() => setUploadMode('file')}
-                                        disabled={isUploading}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${uploadMode === 'file' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        <Upload size={16} /> File Upload
-                                    </button>
-                                    <button
-                                        onClick={() => setUploadMode('link')}
-                                        disabled={isUploading}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${uploadMode === 'link' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        <LinkIcon size={16} /> Drive Link
-                                    </button>
-                                    <button
-                                        onClick={() => setUploadMode('mux_id')}
-                                        disabled={isUploading}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${uploadMode === 'mux_id' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        <Play size={16} /> Mux ID
-                                    </button>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Google Drive Link</label>
+                                    <input
+                                        type="text"
+                                        value={driveLink}
+                                        onChange={e => setDriveLink(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        placeholder="https://drive.google.com/..."
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1">Make sure link is 'Anyone with link'</p>
                                 </div>
 
-                                {uploadMode === 'file' && (
-                                    /* File Input */
-                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-white hover:border-indigo-300 transition-colors">
-                                        <input
-                                            type="file"
-                                            accept="audio/*"
-                                            id="audio-upload"
-                                            className="hidden"
-                                            onChange={handleFileSelect}
-                                            disabled={isUploading}
-                                        />
-                                        <label htmlFor="audio-upload" className="cursor-pointer block">
-                                            {selectedFile ? (
-                                                <div className="text-indigo-600 font-bold flex flex-col items-center">
-                                                    <MusicIcon size={32} className="mb-2" />
-                                                    <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                                                    <span className="text-xs text-gray-500 font-normal">Click to change</span>
-                                                </div>
-                                            ) : (
-                                                <div className="text-gray-500 flex flex-col items-center">
-                                                    <Upload size={32} className="mb-2" />
-                                                    <span className="font-medium">Click to select Audio</span>
-                                                    <span className="text-xs mt-1">MP3, WAV, M4A supported</span>
-                                                </div>
-                                            )}
-                                        </label>
-                                    </div>
-                                )}
-
-                                {uploadMode === 'link' && (
-                                    /* Link Input */
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Google Drive Link</label>
-                                        <input
-                                            type="text"
-                                            value={driveLink}
-                                            onChange={e => setDriveLink(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            placeholder="https://drive.google.com/..."
-                                        />
-                                    </div>
-                                )}
-
-                                {uploadMode === 'mux_id' && (
-                                    /* Mux ID Input */
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Mux Playback ID</label>
-                                        <input
-                                            type="text"
-                                            value={muxIdInput}
-                                            onChange={e => setMuxIdInput(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            placeholder="Enter Mux Playback ID..."
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Status / Progress */}
-                                {processingStatus !== 'idle' && (
-                                    <div className="bg-indigo-50 rounded-xl p-4">
-                                        <div className="flex justify-between text-xs font-bold text-indigo-800 mb-2">
-                                            <span className="capitalize">{processingStatus === 'uploading' ? 'Uploading...' : 'Processing...'}</span>
-                                            <span>{Math.round(uploadProgress)}%</span>
-                                        </div>
-                                        <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-indigo-500 transition-all duration-500"
-                                                style={{ width: `${uploadProgress}%` }}
-                                            />
-                                        </div>
-                                        {processingStatus === 'processing' && (
-                                            <p className="text-xs text-indigo-600 mt-2 flex items-center gap-1">
-                                                <Loader2 size={12} className="animate-spin" /> Preparing media for playback...
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-
                                 <button
-                                    onClick={handleUpload}
-                                    disabled={!isFormValid()}
-                                    className={`w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2`}
+                                    onClick={handleAddNote}
+                                    disabled={!title || !driveLink}
+                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 mt-2"
                                 >
-                                    {isUploading ? <Loader2 size={20} className="animate-spin" /> : (uploadMode === 'file' ? 'Upload & Save' : 'Save Note')}
+                                    Save Note
                                 </button>
                             </div>
                         </motion.div>

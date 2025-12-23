@@ -217,8 +217,7 @@ const Reels: React.FC = () => {
       setUploadStatusText('Initializing upload...');
 
       // 1. Create Upload URL
-      const finalTitle = (uploadTitle || selectedFile.name) + " - Reel";
-      const { uploadId, uploadUrl } = await createMuxUpload({ title: finalTitle });
+      const { uploadId, uploadUrl } = await createMuxUpload();
 
       // 2. Upload File
       setUploadStatusText('Uploading video...');

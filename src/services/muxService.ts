@@ -1,5 +1,5 @@
 
-const MUX_API_BASE = '/api/mux/video/v1';
+const MUX_API_BASE = 'https://api.mux.com/video/v1';
 
 // WARNING: In a real production app, these keys should NOT be exposed on the client.
 // Requests should be proxied through a backend server.
@@ -22,7 +22,7 @@ export interface MuxAsset {
     status: 'waiting' | 'uploading' | 'processing' | 'ready' | 'error';
 }
 
-export const createMuxUpload = async (options?: { audioOnly?: boolean; title?: string }): Promise<{ uploadId: string; uploadUrl: string; assetId?: string }> => {
+export const createMuxUpload = async (): Promise<{ uploadId: string; uploadUrl: string }> => {
     const response = await fetch(`${MUX_API_BASE}/uploads`, {
         method: 'POST',
         headers: {
@@ -32,34 +32,20 @@ export const createMuxUpload = async (options?: { audioOnly?: boolean; title?: s
         body: JSON.stringify({
             new_asset_settings: {
                 playback_policy: ['public'],
-                // mp4_support is deprecated for basic assets/audio
-                audio_only: options?.audioOnly,
-                passthrough: options?.title,
             },
             cors_origin: window.location.origin, // Important for direct uploads from browser
         }),
     });
 
     if (!response.ok) {
-        console.error('Mux API Error Status:', response.status, response.statusText);
-        let errorMessage = 'Failed to create upload URL';
-        try {
-            const errorBody = await response.json();
-            console.error('Mux API Error Body:', errorBody);
-            // Mux errors are usually { error: { message: "..." } }
-            errorMessage = errorBody.error?.message || errorBody.message || JSON.stringify(errorBody);
-        } catch (e) {
-            console.error('Could not parse error JSON');
-            errorMessage = await response.text();
-        }
-        throw new Error(`Mux Error (${response.status}): ${errorMessage}`);
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create upload URL');
     }
 
     const data = await response.json();
     return {
         uploadId: data.data.id,
         uploadUrl: data.data.url,
-        assetId: data.data.asset_id,
     };
 };
 
