@@ -51,6 +51,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canEditNotes', label: 'Edit Notes' },
                 { key: 'canEditFlipbook', label: 'Edit Flipbook/Storybook' },
                 { key: 'canEditVoiceNotes', label: 'Edit Voice Notes' },
+                { key: 'canEditWishes', label: 'Edit Wishes' },
             ]
         },
         {
@@ -70,6 +71,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canViewMessages', label: 'View Messages' },
                 { key: 'canViewSecretMessage', label: 'View Secret Messages' },
                 { key: 'canViewComplaints', label: 'View Complain Box' },
+                { key: 'canViewWishes', label: 'View Wishes' },
             ]
         },
         {
@@ -80,9 +82,11 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canViewAdmin', label: 'Access Admin Panel' },
                 { key: 'canAddReels', label: 'Add Reels' },
                 { key: 'canAddComplaints', label: 'Add Complaints' },
+                { key: 'canAddWishes', label: 'Add Wishes' },
                 { key: 'canDeleteReels', label: 'Delete Reels' },
                 { key: 'canDeleteNotes', label: 'Delete Notes' },
                 { key: 'canDeleteComplaints', label: 'Delete Complaints' },
+                { key: 'canDeleteWishes', label: 'Delete Wishes' },
             ]
         }
     ];

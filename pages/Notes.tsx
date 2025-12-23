@@ -99,7 +99,11 @@ const Notes: React.FC = () => {
       'bg-yellow-50 border-yellow-100 text-yellow-500',
       'bg-green-50 border-green-100 text-green-500',
       'bg-pink-50 border-pink-100 text-pink-500',
-      'bg-purple-50 border-purple-100 text-purple-500'
+      'bg-purple-50 border-purple-100 text-purple-500',
+      'bg-orange-50 border-orange-100 text-orange-500',
+      'bg-teal-50 border-teal-100 text-teal-500',
+      'bg-rose-50 border-rose-100 text-rose-500',
+      'bg-indigo-50 border-indigo-100 text-indigo-500'
     ];
     return colors[index % colors.length];
   };
@@ -210,7 +214,7 @@ const Notes: React.FC = () => {
             className="fixed inset-0 bg-white z-[100] flex flex-col"
           >
             {/* Editor Header */}
-            <div className="px-4 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div className="px-4 py-4 pt-16 md:pt-4 border-b border-gray-100 flex justify-between items-center bg-white shadow-sm z-50">
               <button
                 onClick={() => setIsEditorOpen(false)}
                 className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"

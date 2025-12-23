@@ -116,7 +116,12 @@ export interface UserPermissions {
   canDeleteNotes?: boolean;
   canViewComplaints?: boolean;
   canAddComplaints?: boolean;
+
   canDeleteComplaints?: boolean;
+  canViewWishes?: boolean;
+  canAddWishes?: boolean;
+  canEditWishes?: boolean;
+  canDeleteWishes?: boolean;
 }
 
 export interface CardVisibility {
@@ -224,6 +229,17 @@ export interface Complaint {
   createdBy: string;
   createdByName?: string;
   resolved?: boolean;
+}
+
+
+export interface OurWish {
+  id: string;
+  text: string;
+  status: 'pending' | 'fulfilled';
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface UserActivity {

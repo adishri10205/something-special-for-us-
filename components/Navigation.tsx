@@ -1,6 +1,6 @@
 import React, { useState } from 'react'; // Added useState
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus, Key, AlertCircle } from 'lucide-react'; // Added more icons
+import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus, Key, AlertCircle, Star } from 'lucide-react'; // Added more icons
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
@@ -57,6 +57,7 @@ const Navigation: React.FC = () => {
     ...(hasPermission('canViewVoiceNotes') ? [{ to: '/voice-notes', icon: Mic, label: 'Voice Notes' }] : []),
     ...(hasPermission('canViewSecretMessage') ? [{ to: '/secret-message', icon: Key, label: 'Secret' }] : []),
     ...(hasPermission('canViewComplaints') ? [{ to: '/complain', icon: AlertCircle, label: 'Complain' }] : []),
+    ...(hasPermission('canViewWishes') ? [{ to: '/wishes', icon: Star, label: 'Wishes' }] : []),
   ];
 
   return (
