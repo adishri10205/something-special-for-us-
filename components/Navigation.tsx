@@ -4,17 +4,19 @@ import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
+import { useData } from '../context/DataContext';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, lockApp, isAppLocked, currentUser, isAdmin, hasPermission } = useAuth();
-  const { title } = useHeader();
+  const { title, isMusicMode } = useHeader();
+  const { appVersion } = useData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
 
 
-  if (isAppLocked) return null;
+  if (isAppLocked || isMusicMode) return null;
 
 
   const links = [
@@ -124,6 +126,10 @@ const Navigation: React.FC = () => {
           <LogOut size={24} className="group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Exit</span>
         </button>
+
+        <div className="mt-auto mb-2 text-[10px] text-gray-300 font-mono opacity-50">
+          v{appVersion}
+        </div>
       </motion.nav>
 
       {/* Mobile Bottom Bar - Premium Floating Design */}
@@ -258,6 +264,9 @@ const Navigation: React.FC = () => {
                     <LogOut size={20} />
                     Logout
                   </button>
+                  <div className="text-center pt-4">
+                    <span className="text-xs text-gray-400 font-mono">App Version: {appVersion}</span>
+                  </div>
                 </div>
               </motion.div>
             </>

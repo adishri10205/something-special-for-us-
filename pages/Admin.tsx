@@ -38,6 +38,7 @@ const Admin: React.FC = () => {
     siteTitle, setSiteTitle,
     welcomeMessage, setWelcomeMessage,
     homeCaption, setHomeCaption,
+    appVersion, setAppVersion,
 
   } = useData();
 
@@ -1070,6 +1071,32 @@ const Admin: React.FC = () => {
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Startup Configuration</h2>
+
+              {/* General Identity */}
+              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                <h3 className="font-bold text-gray-700">General Identity</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">App Name / Site Title</label>
+                    <input
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-rose-500 outline-none"
+                      value={siteTitle}
+                      onChange={e => setSiteTitle(e.target.value)}
+                      placeholder="e.g. My App"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">App Version</label>
+                    <input
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-rose-500 outline-none"
+                      value={appVersion}
+                      onChange={e => setAppVersion(e.target.value)}
+                      placeholder="e.g. 1.0.0"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white p-6 rounded-xl border shadow-sm space-y-6">
 
                 {/* Mode Selection */}

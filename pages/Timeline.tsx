@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useHeader } from '../context/HeaderContext';
 import { Calendar, Heart, Edit, Trash2 } from 'lucide-react';
 import EditModal from '../components/EditModal';
 
@@ -10,7 +11,12 @@ import { TIMELINE_DATA } from '../constants'; // Import constants
 const Timeline: React.FC = () => {
   const { timelineData, setTimelineData, isAdmin } = useData();
   const { hasPermission } = useAuth();
+  const { setTitle } = useHeader();
   const canEdit = isAdmin || hasPermission('canEditTimeline');
+
+  useEffect(() => {
+    setTitle('Journey');
+  }, [setTitle]);
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const handleDelete = (id: string) => {

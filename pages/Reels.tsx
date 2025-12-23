@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MuxPlayer from '@mux/mux-player-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useHeader } from '../context/HeaderContext';
 import { Heart, Share2, MoreHorizontal, Edit, Trash2, Plus, X, Video, Link as LinkIcon, Play, Loader2, Volume2, VolumeX, Instagram, MessageCircle, Send, Music } from 'lucide-react';
 import EditModal from '../components/EditModal';
 import { createMuxUpload, uploadFileToMux, getMuxUploadStatus, getMuxAsset } from '../src/services/muxService';
@@ -11,6 +12,7 @@ import { Reel } from '../types';
 const Reels: React.FC = () => {
   const { reelsData, setReelsData } = useData();
   const { hasPermission, currentUser, isAdmin } = useAuth();
+  const { setTitle } = useHeader();
   const canEdit = isAdmin || hasPermission('canEditReels');
   const canDelete = isAdmin || hasPermission('canDeleteReels');
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -32,6 +34,10 @@ const Reels: React.FC = () => {
 
   // Audio State
   const [isMuted, setIsMuted] = useState(true);
+
+  useEffect(() => {
+    setTitle('Reels');
+  }, [setTitle]);
 
   // Listen for external "Adding Reel" trigger (from Mobile Navigation FAB)
   useEffect(() => {

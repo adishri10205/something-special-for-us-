@@ -4,6 +4,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { DataProvider, useData } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { HeaderProvider } from './context/HeaderContext';
+import { AudioProvider } from './context/AudioContext';
 import Layout from './components/Layout';
 import MPINGate from './components/MPINGate';
 import InstallPrompt from './components/InstallPrompt';
@@ -98,9 +99,11 @@ const App: React.FC = () => {
       <AuthProvider>
         <DataProvider>
           <HeaderProvider>
-            <HashRouter>
-              <AppRoutes />
-            </HashRouter>
+            <AudioProvider>
+              <HashRouter>
+                <AppRoutes />
+              </HashRouter>
+            </AudioProvider>
           </HeaderProvider>
         </DataProvider>
       </AuthProvider>

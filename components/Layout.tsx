@@ -1,10 +1,21 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Navigation from './Navigation';
 import FloatingHearts from './FloatingHearts';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useHeader } from '../context/HeaderContext';
+import GlobalMusicPlayer from './GlobalMusicPlayer';
 const Layout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isMusicMode } = useHeader();
+
+  // Enforce Music Mode Route
+  React.useEffect(() => {
+    if (isMusicMode && location.pathname !== '/music') {
+      navigate('/music', { replace: true });
+    }
+  }, [isMusicMode, location.pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans selection:bg-rose-200 overflow-hidden relative">
@@ -16,6 +27,8 @@ const Layout: React.FC = () => {
       <FloatingHearts />
 
       <Navigation />
+
+      <GlobalMusicPlayer />
 
       <main className={`relative z-10 md:pl-24 ${location.pathname === '/reels' ? 'pt-0 pb-0' : 'pt-14 md:pt-0 pb-24 md:pb-0'} h-screen overflow-y-auto no-scrollbar scroll-smooth`}>
         <AnimatePresence mode="wait">

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useHeader } from '../context/HeaderContext';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../src/firebaseConfig';
 import InstallPrompt from '../components/InstallPrompt';
@@ -106,8 +107,13 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { cardVisibility, welcomeMessage, homeCaption } = useData();
   const [clickCount, setClickCount] = useState(0);
+  const { setTitle } = useHeader();
 
   const { currentUser, hasPermission } = useAuth();
+
+  useEffect(() => {
+    setTitle('Home');
+  }, [setTitle]);
 
   const handleSecretClick = () => {
     const newCount = clickCount + 1;

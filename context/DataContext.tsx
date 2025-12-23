@@ -64,6 +64,8 @@ interface DataContextType {
   setHomeCaption: (caption: string) => void;
   siteTitle: string;
   setSiteTitle: (title: string) => void;
+  appVersion: string;
+  setAppVersion: (version: string) => void;
   vaultPin: string;
   setVaultPin: (pin: string) => void;
   startupSettings: StartupSettings;
@@ -109,6 +111,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [welcomeMessage, _setWelcomeMessage] = useState<string>("Welcome, My Besti");
   const [homeCaption, _setHomeCaption] = useState<string>('Every love story is beautiful, but ours is my favorite.');
   const [siteTitle, _setSiteTitle] = useState<string>("Happy Birthday My Besti 🥰");
+  const [appVersion, _setAppVersion] = useState<string>('1.0.0');
   const [vaultPin, _setVaultPin] = useState<string>(VAULT_PIN);
   const [startupSettings, _setStartupSettings] = useState<StartupSettings>({ mode: 'full', showOnce: true, hasSeen: false });
   const [introFlow, _setIntroFlow] = useState<IntroStep[]>(DEFAULT_INTRO_FLOW);
@@ -188,6 +191,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (val.welcomeMessage) _setWelcomeMessage(val.welcomeMessage);
           if (val.homeCaption) _setHomeCaption(val.homeCaption);
           if (val.siteTitle) _setSiteTitle(val.siteTitle);
+          if (val.appVersion) _setAppVersion(val.appVersion);
           if (val.vaultPin) _setVaultPin(val.vaultPin);
           if (val.startupSettings) _setStartupSettings({ ...DEFAULT_STARTUP_SETTINGS, ...val.startupSettings });
           if (val.introFlow) _setIntroFlow(val.introFlow);
@@ -226,6 +230,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setWelcomeMessage = (msg: string) => updateDb('settings/welcomeMessage', msg);
   const setHomeCaption = (caption: string) => updateDb('settings/homeCaption', caption);
   const setSiteTitle = (title: string) => updateDb('settings/siteTitle', title);
+  const setAppVersion = (version: string) => updateDb('settings/appVersion', version);
   const setVaultPin = (pin: string) => updateDb('settings/vaultPin', pin);
   const setStartupSettings = (settings: StartupSettings) => updateDb('settings/startupSettings', settings);
   const setIntroFlow = (flow: IntroStep[]) => updateDb('settings/introFlow', flow);
@@ -289,6 +294,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       welcomeMessage, setWelcomeMessage,
       homeCaption, setHomeCaption,
       siteTitle, setSiteTitle,
+      appVersion, setAppVersion,
       vaultPin, setVaultPin,
       startupSettings, setStartupSettings,
       introFlow, setIntroFlow,
