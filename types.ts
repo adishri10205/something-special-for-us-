@@ -114,6 +114,9 @@ export interface UserPermissions {
   canDeleteReels?: boolean;
   canAddReels?: boolean;
   canDeleteNotes?: boolean;
+  canViewComplaints?: boolean;
+  canAddComplaints?: boolean;
+  canDeleteComplaints?: boolean;
 }
 
 export interface CardVisibility {
@@ -211,6 +214,17 @@ export interface VoiceNote {
 }
 
 export type UserStatusType = 'online' | 'offline' | 'away' | 'busy';
+
+
+export interface Complaint {
+  id: string;
+  text: string;
+  category: 'Partners' | 'Both';
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  resolved?: boolean;
+}
 
 export interface UserActivity {
   status: UserStatusType;

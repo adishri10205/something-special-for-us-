@@ -69,6 +69,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canViewVault', label: 'View Vault' },
                 { key: 'canViewMessages', label: 'View Messages' },
                 { key: 'canViewSecretMessage', label: 'View Secret Messages' },
+                { key: 'canViewComplaints', label: 'View Complain Box' },
             ]
         },
         {
@@ -78,8 +79,10 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
             permissions: [
                 { key: 'canViewAdmin', label: 'Access Admin Panel' },
                 { key: 'canAddReels', label: 'Add Reels' },
+                { key: 'canAddComplaints', label: 'Add Complaints' },
                 { key: 'canDeleteReels', label: 'Delete Reels' },
                 { key: 'canDeleteNotes', label: 'Delete Notes' },
+                { key: 'canDeleteComplaints', label: 'Delete Complaints' },
             ]
         }
     ];

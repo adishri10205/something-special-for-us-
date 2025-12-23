@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key } from 'lucide-react';
+import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key, AlertCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
@@ -110,6 +110,15 @@ const cards = [
     shadow: 'shadow-violet-500/25',
     delay: 0.95
   },
+  {
+    to: '/complain',
+    title: 'Complain',
+    subtitle: 'Issues',
+    icon: AlertCircle,
+    gradient: 'from-orange-500 via-red-500 to-rose-600',
+    shadow: 'shadow-red-500/25',
+    delay: 1.0
+  },
 ];
 
 const Home: React.FC = () => {
@@ -174,6 +183,7 @@ const Home: React.FC = () => {
       case '/flipbook': return hasPermission('canViewFlipbook');
       case '/voice-notes': return hasPermission('canViewVoiceNotes');
       case '/secret-message': return hasPermission('canViewSecretMessage');
+      case '/complain': return hasPermission('canViewComplaints');
       default: return true; // Other cards visible by default
     }
   });
