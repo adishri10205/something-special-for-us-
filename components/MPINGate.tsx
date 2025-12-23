@@ -82,6 +82,23 @@ const MPINGate: React.FC<MPINGateProps> = ({ children }) => {
         }
     }, [inputMpin]);
 
+    // Handle Keyboard Input
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (/^\d$/.test(e.key)) {
+                if (inputMpin.length < 4) {
+                    setInputMpin(prev => prev + e.key);
+                    setError('');
+                }
+            } else if (e.key === 'Backspace') {
+                setInputMpin(prev => prev.slice(0, -1));
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [inputMpin]);
+
     if (!currentUser) return <>{children}</>; // Should be handled by ProtectedRoute
 
     // If user has MPIN and NOT locked -> Render Children

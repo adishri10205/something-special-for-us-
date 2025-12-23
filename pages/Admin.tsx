@@ -35,6 +35,9 @@ const Admin: React.FC = () => {
     chatSteps, setChatSteps,
     adminEmails, setAdminEmails,
     wishFolders, setWishFolders,
+    siteTitle, setSiteTitle,
+    welcomeMessage, setWelcomeMessage,
+    homeCaption, setHomeCaption,
 
   } = useData();
 
@@ -1363,6 +1366,23 @@ const Admin: React.FC = () => {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Manage Home Page</h2>
 
+              {/* Site Title Editor */}
+              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                <h3 className="font-bold text-gray-700">Site Browser Title</h3>
+                <div className="flex gap-4">
+                  <input
+                    className="flex-1 p-2 border rounded"
+                    placeholder="Happy Birthday My Besti"
+                    defaultValue={siteTitle}
+                    onBlur={(e) => setSiteTitle(e.target.value)}
+                  />
+                  <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
+                    Auto-Saved
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400">The title shown in the browser tab and search results.</p>
+              </div>
+
               {/* Welcome Message Editor */}
               <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
                 <h3 className="font-bold text-gray-700">Welcome Title</h3>
@@ -1370,8 +1390,8 @@ const Admin: React.FC = () => {
                   <input
                     className="flex-1 p-2 border rounded"
                     placeholder="Welcome, My Besti"
-                    defaultValue={useData().welcomeMessage}
-                    onBlur={(e) => useData().setWelcomeMessage(e.target.value)}
+                    defaultValue={welcomeMessage}
+                    onBlur={(e) => setWelcomeMessage(e.target.value)}
                   />
                   <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
                     Auto-Saved
@@ -1387,8 +1407,8 @@ const Admin: React.FC = () => {
                   <textarea
                     className="flex-1 p-2 border rounded min-h-[80px]"
                     placeholder="Every love story is beautiful, but ours is my favorite."
-                    defaultValue={useData().homeCaption}
-                    onBlur={(e) => useData().setHomeCaption(e.target.value)}
+                    defaultValue={homeCaption}
+                    onBlur={(e) => setHomeCaption(e.target.value)}
                   />
                   <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none h-fit">
                     Auto-Saved

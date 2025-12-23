@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+    --font-script: "Dancing Script", cursive;
+    --font-sans: "Poppins", sans-serif;
+}
+
 /* Custom Scrollbar Styles (moved from index.html) */
 .no-scrollbar::-webkit-scrollbar {
     display: none;

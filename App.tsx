@@ -1,13 +1,13 @@
 import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { HeaderProvider } from './context/HeaderContext'; // Added
+import { HeaderProvider } from './context/HeaderContext';
 import Layout from './components/Layout';
 import MPINGate from './components/MPINGate';
+import InstallPrompt from './components/InstallPrompt';
 import { AppState } from './types';
-
 
 // Lazy Load Pages for Performance Optimization
 const Intro = lazy(() => import('./pages/Intro'));
@@ -28,7 +28,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { appState } = useApp();
-  const { currentUser, loading } = useAuth(); // removed loginWithGoogle usage
+  const { currentUser, loading } = useAuth();
 
   if (loading) return <LoadingSpinner />;
 
@@ -55,10 +55,16 @@ const LoadingSpinner = () => (
 
 const AppRoutes: React.FC = () => {
   const { currentUser } = useAuth();
+  const { siteTitle } = useData();
+
+  React.useEffect(() => {
+    if (siteTitle) {
+      document.title = siteTitle;
+    }
+  }, [siteTitle]);
 
   return (
     <Suspense fallback={<LoadingSpinner />}>
-
       <Routes>
         <Route path="/" element={<Intro />} />
         {/* Redirect to home if already logged in */}

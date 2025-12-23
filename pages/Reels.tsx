@@ -197,7 +197,7 @@ const Reels: React.FC = () => {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="h-full w-full md:max-w-md overflow-y-auto snap-y snap-mandatory no-scrollbar md:rounded-2xl md:shadow-2xl md:border-4 md:border-white/20 bg-black scroll-smooth pb-24 md:pb-0"
+        className="h-full w-full md:w-auto md:h-[90vh] md:aspect-[9/16] overflow-y-auto snap-y snap-mandatory no-scrollbar md:rounded-2xl md:shadow-2xl md:border-4 md:border-white/20 bg-black scroll-smooth pb-24 md:pb-0"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 100px)' }}
       >
         {reelsData.map((reel, index) => {

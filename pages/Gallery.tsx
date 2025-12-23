@@ -21,6 +21,7 @@ const Gallery: React.FC = () => {
   const { hasPermission } = useAuth(); // Get hasPermission
   const canEdit = isAdmin || hasPermission('canEditGallery'); // Define canEdit helper
   const [selectedDisplayIndex, setSelectedDisplayIndex] = useState<number | null>(null);
+  const [slideDirection, setSlideDirection] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [movingItem, setMovingItem] = useState<GalleryImage | null>(null);
 
@@ -673,6 +674,7 @@ const Gallery: React.FC = () => {
               onClose={() => setSelectedDisplayIndex(null)}
               onNext={() => navigateImage(1)}
               onPrev={() => navigateImage(-1)}
+              direction={slideDirection}
             />
           </AnimatePresence>,
           document.body
@@ -875,20 +877,34 @@ const GalleryItem: React.FC<{
 }> = ({ image, index, onClick, isAdmin, onDelete, onMove }) => {
   const thumbnailUrl = getOptimizedImageUrl(image, 500);
 
+  /* Use local state for load animation */
+  const [imgLoaded, setImgLoaded] = React.useState(false);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "50px" }}
-      transition={{ delay: 0.1 }}
+      transition={{
+        duration: 0.3,
+        delay: Math.min(index * 0.025, 0.5),
+        type: "spring",
+        stiffness: 260,
+        damping: 20
+      }}
       className="break-inside-avoid relative group cursor-zoom-in rounded-3xl overflow-hidden bg-gray-100 mb-6 shadow-sm hover:shadow-xl transition-all duration-300"
+      whileTap={{ scale: 0.96 }}
       onClick={onClick}
     >
+      {/* Loading Skeleton */}
+      {!imgLoaded && <div className="absolute inset-0 bg-gray-200 animate-pulse z-0" />}
+
       <img
         src={thumbnailUrl}
         alt={image.caption || 'Memory'}
         loading="lazy"
-        className="w-full h-auto block object-cover transform transition-transform duration-700 group-hover:scale-105"
+        onLoad={() => setImgLoaded(true)}
+        className={`w-full h-auto block object-cover transform transition-all duration-700 group-hover:scale-105 ${imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'}`}
       />
 
       {/* Hover Overlay - Pinterest Style */}
@@ -919,22 +935,11 @@ const Lightbox: React.FC<{
   onClose: () => void;
   onNext: () => void;
   onPrev: () => void;
-}> = ({ image, onClose, onNext, onPrev }) => {
+  direction: number;
+}> = ({ image, onClose, onNext, onPrev, direction }) => {
   const highResUrl = image.publicId
     ? getCloudinaryUrl(image.publicId, { width: 1600 })
     : getOptimizedImageUrl(image, 1600);
-
-  // Track swipe direction for animation
-  const [[page, direction], setPage] = useState([0, 0]);
-  const [currentImageId, setCurrentImageId] = useState(image.id);
-
-  // Detect legitimate index change from props
-  useEffect(() => {
-    if (image.id !== currentImageId) {
-      setPage([page + 1, 1]); // Default forward
-      setCurrentImageId(image.id);
-    }
-  }, [image.id]);
 
   const swipeConfidenceThreshold = 10000;
   const swipePower = (offset: number, velocity: number) => {
@@ -944,25 +949,29 @@ const Lightbox: React.FC<{
   const variants = {
     enter: (direction: number) => ({
       x: direction > 0 ? '100%' : '-100%',
-      opacity: 0
+      opacity: 0,
+      scale: 0.9
     }),
     center: {
       zIndex: 1,
       x: 0,
-      opacity: 1
+      opacity: 1,
+      scale: 1
     },
     exit: (direction: number) => ({
       zIndex: 0,
       x: direction < 0 ? '100%' : '-100%',
-      opacity: 0
+      opacity: 0,
+      scale: 0.9
     })
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.15, ease: "circOut" }}
       className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-md touch-none"
       onClick={onClose}
     >
@@ -984,7 +993,8 @@ const Lightbox: React.FC<{
             exit="exit"
             transition={{
               x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.2 }
+              opacity: { duration: 0.2 },
+              scale: { duration: 0.2 }
             }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}

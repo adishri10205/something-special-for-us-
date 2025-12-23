@@ -6,6 +6,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../src/firebaseConfig';
+import InstallPrompt from '../components/InstallPrompt';
 
 const cards = [
 
@@ -253,6 +254,7 @@ const Home: React.FC = () => {
           </motion.div>
         ))}
       </div>
+      <InstallPrompt />
     </div >
   );
 };

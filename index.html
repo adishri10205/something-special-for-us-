@@ -6,6 +6,9 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, interactive-widget=resizes-content" />
   <title>Happy Birthday My Besti 🥰</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e11d48">
+  <link rel="icon" type="image/svg+xml" href="/pwa-icon.svg">
 
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +20,15 @@
 
 <body>
   <div id="root"></div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(params => console.log('SW registered:', params))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
   <script type="module" src="/index.tsx"></script>
 </body>
 
