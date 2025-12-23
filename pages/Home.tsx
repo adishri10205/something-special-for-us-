@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic } from 'lucide-react';
+import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
@@ -101,6 +101,15 @@ const cards = [
     shadow: 'shadow-indigo-500/25',
     delay: 0.9
   },
+  {
+    to: '/secret-message',
+    title: 'Secret',
+    subtitle: 'Confidential',
+    icon: Key,
+    gradient: 'from-violet-600 via-purple-600 to-indigo-600',
+    shadow: 'shadow-violet-500/25',
+    delay: 0.95
+  },
 ];
 
 const Home: React.FC = () => {
@@ -164,6 +173,7 @@ const Home: React.FC = () => {
       case '/links': return hasPermission('canViewJourney'); // Bundle with Journey
       case '/flipbook': return hasPermission('canViewFlipbook');
       case '/voice-notes': return hasPermission('canViewVoiceNotes');
+      case '/secret-message': return hasPermission('canViewSecretMessage');
       default: return true; // Other cards visible by default
     }
   });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'; // Added useState
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus } from 'lucide-react'; // Added more icons
+import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus, Key } from 'lucide-react'; // Added more icons
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useHeader } from '../context/HeaderContext';
@@ -19,7 +19,25 @@ const Navigation: React.FC = () => {
   React.useEffect(() => {
     const handleHideNav = (e: CustomEvent) => setShouldHideNav(e.detail);
     window.addEventListener('hide-bottom-nav', handleHideNav as EventListener);
-    return () => window.removeEventListener('hide-bottom-nav', handleHideNav as EventListener);
+
+    // Keyboard detection logic
+    const initialHeight = window.innerHeight;
+    const handleResize = () => {
+      const currentHeight = window.innerHeight;
+      // If height decreases by more than 20%, assume keyboard is open
+      if (currentHeight < initialHeight * 0.8) {
+        setShouldHideNav(true);
+      } else {
+        setShouldHideNav(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('hide-bottom-nav', handleHideNav as EventListener);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   if (isAppLocked || isMusicMode) return null;
@@ -37,6 +55,7 @@ const Navigation: React.FC = () => {
     ...(hasPermission('canViewJourney') ? [{ to: '/links', icon: Link2, label: 'Links' }] : []), // Bundling Links with Journey for now as "Extras"
     ...(hasPermission('canViewFlipbook') ? [{ to: '/flipbook', icon: Book, label: 'Storybook' }] : []),
     ...(hasPermission('canViewVoiceNotes') ? [{ to: '/voice-notes', icon: Mic, label: 'Voice Notes' }] : []),
+    ...(hasPermission('canViewSecretMessage') ? [{ to: '/secret-message', icon: Key, label: 'Secret' }] : []),
   ];
 
   return (

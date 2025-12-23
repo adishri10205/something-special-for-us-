@@ -68,6 +68,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canViewVoiceNotes', label: 'View Voice Notes' },
                 { key: 'canViewVault', label: 'View Vault' },
                 { key: 'canViewMessages', label: 'View Messages' },
+                { key: 'canViewSecretMessage', label: 'View Secret Messages' },
             ]
         },
         {

@@ -24,6 +24,7 @@ const Flipbook = lazy(() => import('./pages/Flipbook'));
 const Videos = lazy(() => import('./pages/Videos'));
 const VoiceNotes = lazy(() => import('./pages/VoiceNotes'));
 const Admin = lazy(() => import('./pages/Admin'));
+const SecretMessage = lazy(() => import('./pages/SecretMessage'));
 
 const LoadingSpinner = () => (
   <div className="flex h-screen w-full items-center justify-center bg-rose-50">
@@ -58,6 +59,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/music" element={<ProtectedRoute><MusicPage /></ProtectedRoute>} />
           <Route path="/special" element={<ProtectedRoute><Message /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+          <Route path="/secret-message" element={<ProtectedRoute><SecretMessage /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/flipbook" element={<ProtectedRoute><Flipbook /></ProtectedRoute>} />

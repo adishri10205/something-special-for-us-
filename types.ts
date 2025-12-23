@@ -108,6 +108,7 @@ export interface UserPermissions {
   canViewVault?: boolean;
   canViewAdmin?: boolean;
   canViewMessages?: boolean;
+  canViewSecretMessage?: boolean;
 
   // Special Permissions
   canDeleteReels?: boolean;
