@@ -78,6 +78,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose
                 { key: 'canViewAdmin', label: 'Access Admin Panel' },
                 { key: 'canAddReels', label: 'Add Reels' },
                 { key: 'canDeleteReels', label: 'Delete Reels' },
+                { key: 'canDeleteNotes', label: 'Delete Notes' },
             ]
         }
     ];

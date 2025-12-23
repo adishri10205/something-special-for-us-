@@ -9,6 +9,13 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isMusicMode } = useHeader();
+  const [shouldHideNav, setShouldHideNav] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleHideNav = (e: CustomEvent) => setShouldHideNav(e.detail);
+    window.addEventListener('hide-bottom-nav', handleHideNav as EventListener);
+    return () => window.removeEventListener('hide-bottom-nav', handleHideNav as EventListener);
+  }, []);
 
   // Enforce Music Mode Route
   React.useEffect(() => {
@@ -30,7 +37,7 @@ const Layout: React.FC = () => {
 
       <GlobalMusicPlayer />
 
-      <main className={`relative z-10 md:pl-24 ${location.pathname === '/reels' ? 'pt-0 pb-0' : 'pt-14 md:pt-0 pb-24 md:pb-0'} h-screen overflow-y-auto no-scrollbar scroll-smooth`}>
+      <main className={`relative z-10 ${shouldHideNav ? 'md:pl-0' : 'md:pl-24'} transition-all duration-300 ${location.pathname === '/reels' ? 'pt-0 pb-0' : 'pt-14 md:pt-0 pb-24 md:pb-0'} h-screen overflow-y-auto no-scrollbar scroll-smooth`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

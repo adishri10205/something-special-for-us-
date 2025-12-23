@@ -6,9 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { HeaderProvider } from './context/HeaderContext';
 import { AudioProvider } from './context/AudioContext';
 import Layout from './components/Layout';
-import MPINGate from './components/MPINGate';
-import InstallPrompt from './components/InstallPrompt';
-import { AppState } from './types';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy Load Pages for Performance Optimization
 const Intro = lazy(() => import('./pages/Intro'));
@@ -26,27 +24,6 @@ const Flipbook = lazy(() => import('./pages/Flipbook'));
 const Videos = lazy(() => import('./pages/Videos'));
 const VoiceNotes = lazy(() => import('./pages/VoiceNotes'));
 const Admin = lazy(() => import('./pages/Admin'));
-
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { appState } = useApp();
-  const { currentUser, loading } = useAuth();
-
-  if (loading) return <LoadingSpinner />;
-
-  if (appState === AppState.INTRO) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (!currentUser) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return (
-    <MPINGate>
-      {children}
-    </MPINGate>
-  );
-};
 
 const LoadingSpinner = () => (
   <div className="flex h-screen w-full items-center justify-center bg-rose-50">

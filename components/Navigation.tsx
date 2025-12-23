@@ -14,7 +14,13 @@ const Navigation: React.FC = () => {
   const { appVersion } = useData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [shouldHideNav, setShouldHideNav] = useState(false);
 
+  React.useEffect(() => {
+    const handleHideNav = (e: CustomEvent) => setShouldHideNav(e.detail);
+    window.addEventListener('hide-bottom-nav', handleHideNav as EventListener);
+    return () => window.removeEventListener('hide-bottom-nav', handleHideNav as EventListener);
+  }, []);
 
   if (isAppLocked || isMusicMode) return null;
 
@@ -83,125 +89,133 @@ const Navigation: React.FC = () => {
 
 
       {/* Desktop Sidebar */}
-      <motion.nav
-        initial={{ x: -100 }}
-        animate={{ x: 0 }}
-        className="hidden md:flex flex-col fixed left-0 top-0 h-full w-24 bg-white/70 backdrop-blur-md border-r border-rose-100 z-50 items-center py-8 gap-8 shadow-lg"
-      >
-        <div className="text-2xl">💖</div>
-        <div className="flex flex-col gap-6 w-full flex-1">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center p-2 w-full transition-all duration-300 ${isActive ? 'text-rose-600 scale-110' : 'text-gray-400 hover:text-rose-400'}`
-              }
+      <AnimatePresence>
+        {!shouldHideNav && (
+          <motion.nav
+            initial={{ x: -100 }}
+            animate={{ x: 0 }}
+            exit={{ x: -100 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="hidden md:flex flex-col fixed left-0 top-0 h-full w-24 bg-white/70 backdrop-blur-md border-r border-rose-100 z-50 items-center py-8 gap-8 shadow-lg"
+          >
+            <div className="text-2xl">💖</div>
+            <div className="flex flex-col gap-6 w-full flex-1">
+              {links.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center justify-center p-2 w-full transition-all duration-300 ${isActive ? 'text-rose-600 scale-110' : 'text-gray-400 hover:text-rose-400'}`
+                  }
+                >
+                  <link.icon size={24} />
+                  <span className="text-[10px] font-medium mt-1">{link.label}</span>
+                  {location.pathname === link.to && (
+                    <motion.div
+                      layoutId="desktop-indicator"
+                      className="absolute left-0 w-1 h-8 bg-rose-500 rounded-r-full"
+                    />
+                  )}
+                </NavLink>
+              ))}
+            </div>
+
+            <button
+              onClick={lockApp}
+              className="mb-2 p-2 text-gray-400 hover:text-rose-500 transition-colors flex flex-col items-center gap-1 group"
+              title="Quick Lock"
             >
-              <link.icon size={24} />
-              <span className="text-[10px] font-medium mt-1">{link.label}</span>
-              {location.pathname === link.to && (
-                <motion.div
-                  layoutId="desktop-indicator"
-                  className="absolute left-0 w-1 h-8 bg-rose-500 rounded-r-full"
-                />
-              )}
-            </NavLink>
-          ))}
-        </div>
+              <Lock size={24} className="group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-medium">Lock</span>
+            </button>
 
-        <button
-          onClick={lockApp}
-          className="mb-2 p-2 text-gray-400 hover:text-rose-500 transition-colors flex flex-col items-center gap-1 group"
-          title="Quick Lock"
-        >
-          <Lock size={24} className="group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-medium">Lock</span>
-        </button>
+            <button
+              onClick={() => { if (confirm("Logout?")) logout() }}
+              className="mb-6 p-2 text-gray-400 hover:text-red-500 transition-colors flex flex-col items-center gap-1 group"
+            >
+              <LogOut size={24} className="group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-medium">Exit</span>
+            </button>
 
-        <button
-          onClick={() => { if (confirm("Logout?")) logout() }}
-          className="mb-6 p-2 text-gray-400 hover:text-red-500 transition-colors flex flex-col items-center gap-1 group"
-        >
-          <LogOut size={24} className="group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-medium">Exit</span>
-        </button>
-
-        <div className="mt-auto mb-2 text-[10px] text-gray-300 font-mono opacity-50">
-          v{appVersion}
-        </div>
-      </motion.nav>
+            <div className="mt-auto mb-2 text-[10px] text-gray-300 font-mono opacity-50">
+              v{appVersion}
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Bottom Bar - Premium Floating Design */}
-      <motion.nav
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        className="md:hidden fixed bottom-4 left-4 right-4 mx-auto max-w-md bg-white/80 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] z-50 px-2 py-3"
-      >
-        <div className="flex justify-around items-center w-full">
-          {/* Show Priority Links for Mobile Bottom Bar (Home, Gallery, Reels, Music) */}
-          {links.filter(l => ['/home', '/gallery', '/reels', '/music'].includes(l.to)).map((link) => {
-            return (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={(e) => {
-                  if (link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels'))) {
-                    e.preventDefault();
-                    window.dispatchEvent(new CustomEvent('open-add-reel-modal'));
-                  }
-                }}
-                className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300"
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <motion.div
-                        layoutId="mobile-indicator-pill"
-                        className="absolute inset-0 bg-gradient-to-br from-rose-400 via-rose-500 to-pink-600 rounded-2xl shadow-lg shadow-rose-500/40"
-                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                      />
-                    )}
-
-                    <motion.div
-                      whileTap={{ scale: 0.9 }}
-                      className={`relative z-10 flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'text-white scale-105' : 'text-gray-500 hover:text-rose-400'
-                        }`}
-                    >
-                      {/* If on Reels page and this is the Reels link, show Plus icon, otherwise show original icon */}
-                      {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? (
-                        <Plus size={26} strokeWidth={3} />
-                      ) : (
-                        <link.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+      {!shouldHideNav && (
+        <motion.nav
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="md:hidden fixed bottom-4 left-4 right-4 mx-auto max-w-md bg-white/80 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] z-50 px-2 py-3"
+        >
+          <div className="flex justify-around items-center w-full">
+            {/* Show Priority Links for Mobile Bottom Bar (Home, Gallery, Reels, Music) */}
+            {links.filter(l => ['/home', '/gallery', '/reels', '/music'].includes(l.to)).map((link) => {
+              return (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  onClick={(e) => {
+                    if (link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels'))) {
+                      e.preventDefault();
+                      window.dispatchEvent(new CustomEvent('open-add-reel-modal'));
+                    }
+                  }}
+                  className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300"
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <motion.div
+                          layoutId="mobile-indicator-pill"
+                          className="absolute inset-0 bg-gradient-to-br from-rose-400 via-rose-500 to-pink-600 rounded-2xl shadow-lg shadow-rose-500/40"
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
                       )}
 
-                      <span className={`text-[10px] font-semibold tracking-wide ${isActive ? 'opacity-100' : 'opacity-70'
-                        }`}>
-                        {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? 'Add' : link.label}
-                      </span>
-                    </motion.div>
-                  </>
-                )}
-              </NavLink>
-            )
-          })}
+                      <motion.div
+                        whileTap={{ scale: 0.9 }}
+                        className={`relative z-10 flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'text-white scale-105' : 'text-gray-500 hover:text-rose-400'
+                          }`}
+                      >
+                        {/* If on Reels page and this is the Reels link, show Plus icon, otherwise show original icon */}
+                        {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? (
+                          <Plus size={26} strokeWidth={3} />
+                        ) : (
+                          <link.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                        )}
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={lockApp}
-            className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl text-gray-500 hover:text-rose-500 active:scale-95 transition-all duration-200 group"
-          >
-            <div className="flex flex-col items-center gap-1">
-              <Lock size={22} className="group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-semibold tracking-wide opacity-70 group-hover:opacity-100 transition-opacity">
-                Lock
-              </span>
-            </div>
-          </motion.button>
-        </div>
+                        <span className={`text-[10px] font-semibold tracking-wide ${isActive ? 'opacity-100' : 'opacity-70'
+                          }`}>
+                          {link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels')) ? 'Add' : link.label}
+                        </span>
+                      </motion.div>
+                    </>
+                  )}
+                </NavLink>
+              )
+            })}
 
-        {/* Mobile FAB removed as per user request to integrate into nav bar */}
-      </motion.nav>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={lockApp}
+              className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl text-gray-500 hover:text-rose-500 active:scale-95 transition-all duration-200 group"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Lock size={22} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold tracking-wide opacity-70 group-hover:opacity-100 transition-opacity">
+                  Lock
+                </span>
+              </div>
+            </motion.button>
+          </div>
+
+          {/* Mobile FAB removed as per user request to integrate into nav bar */}
+        </motion.nav>
+      )}
 
       {/* Mobile Slide Menu - Shows only pages user has permission to view */}
       <AnimatePresence>

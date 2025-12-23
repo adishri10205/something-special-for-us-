@@ -40,6 +40,7 @@ export interface Track {
 
 export interface Note {
   id: string;
+  title?: string;
   author: 'Me' | 'You';
   text: string;
   date: string;
@@ -86,6 +87,7 @@ export interface UserProfile {
 }
 
 export interface UserPermissions {
+  // Edit Permissions
   canEditTimeline?: boolean;
   canEditGallery?: boolean;
   canEditReels?: boolean;
@@ -93,11 +95,6 @@ export interface UserPermissions {
   canEditNotes?: boolean;
   canEditFlipbook?: boolean;
   canEditVoiceNotes?: boolean;
-  canViewVault?: boolean;
-  canViewAdmin?: boolean;
-  canViewMessages?: boolean;
-  canDeleteReels?: boolean;
-  canAddReels?: boolean;
 
   // View Permissions
   canViewJourney?: boolean;
@@ -108,6 +105,14 @@ export interface UserPermissions {
   canViewNotes?: boolean;
   canViewFlipbook?: boolean;
   canViewVoiceNotes?: boolean;
+  canViewVault?: boolean;
+  canViewAdmin?: boolean;
+  canViewMessages?: boolean;
+
+  // Special Permissions
+  canDeleteReels?: boolean;
+  canAddReels?: boolean;
+  canDeleteNotes?: boolean;
 }
 
 export interface CardVisibility {
