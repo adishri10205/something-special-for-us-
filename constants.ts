@@ -128,3 +128,4 @@ export const INITIAL_ADMIN_EMAILS = [
 export const INITIAL_WISH_FOLDERS = [];
 
 export const YOUTUBE_VIDEOS = [];
+export const DEFAULT_MAX_ATTEMPTS = 5;

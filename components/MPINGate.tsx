@@ -147,7 +147,7 @@ const MPINGate: React.FC<MPINGateProps> = ({ children }) => {
                     </p>
 
                     {/* Warning on Lock Screen */}
-                    {mode === 'enter' && currentUser.failedMpinAttempts && currentUser.failedMpinAttempts > 0 && (
+                    {mode === 'enter' && (currentUser.failedMpinAttempts || 0) > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}

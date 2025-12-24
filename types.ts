@@ -45,6 +45,7 @@ export interface Note {
   text: string;
   date: string;
   reactions: number;
+  pin?: string; // Optional PIN to protect the message
 }
 
 export interface VaultItem {
