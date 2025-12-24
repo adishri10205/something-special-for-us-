@@ -147,22 +147,17 @@ const EmotionAdminTab: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Quick Actions */}
+                {/* Complaint Info */}
                 <div className="pt-4 border-t border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={addComplaint}
-                            className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                            + Add Complaint
-                        </button>
-                        <button
-                            onClick={resolveComplaint}
-                            className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                            ✓ Resolve Complaint
-                        </button>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">📊 Complaint Meter</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-700">
+                            <strong>Auto-Synced:</strong> The complaint meter automatically updates based on active complaints in the ComplainBox page.
+                            <br />
+                            <span className="text-blue-600">• Each unresolved complaint = +10 points</span>
+                            <br />
+                            <span className="text-blue-600">• Resolving complaints reduces the meter</span>
+                        </p>
                     </div>
                 </div>
 

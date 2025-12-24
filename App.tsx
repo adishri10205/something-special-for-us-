@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { DataProvider, useData } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { HeaderProvider } from './context/HeaderContext';
+import { HeaderProvider, useHeader } from './context/HeaderContext';
 import { AudioProvider } from './context/AudioContext';
 import { EmotionProvider } from './context/EmotionContext';
 import Layout from './components/Layout';
@@ -39,13 +39,13 @@ const LoadingSpinner = () => (
 
 const AppRoutes: React.FC = () => {
   const { currentUser } = useAuth();
-  const { siteTitle } = useData();
+  const { title } = useHeader();
 
   React.useEffect(() => {
-    if (siteTitle) {
-      document.title = siteTitle;
+    if (title) {
+      document.title = title;
     }
-  }, [siteTitle]);
+  }, [title]);
 
   return (
     <Suspense fallback={<LoadingSpinner />}>

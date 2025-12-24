@@ -217,11 +217,13 @@ const VoiceNotes: React.FC = () => {
     const authorName = isAditya ? 'Aditya' : (isShruti ? 'Shruti' : 'Admin');
 
     const extractDriveId = (url: string) => {
+        if (!url) return null;
         const match = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|drive\.google\.com\/uc\?.*id=)([-a-zA-Z0-9_]+)/);
         return match ? match[1] : null;
     };
 
     const getStreamUrl = (url: string) => {
+        if (!url) return null;
         const id = extractDriveId(url);
         // Matches user's exact "Working" request format
         return id ? `https://drive.google.com/uc?export=download&id=${id}` : null;

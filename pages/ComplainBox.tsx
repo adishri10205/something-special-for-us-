@@ -7,7 +7,7 @@ import { db } from '../src/firebaseConfig';
 import { Complaint } from '../types';
 
 const ComplainBox: React.FC = () => {
-    const { currentUser, hasPermission } = useAuth();
+    const { currentUser, hasPermission, isAdmin } = useAuth();
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [newComplaint, setNewComplaint] = useState('');
     // const [category, setCategory] = useState<'Partners' | 'Both'>('Partners'); 
@@ -176,9 +176,25 @@ const ComplainBox: React.FC = () => {
                                     className={`bg-white p-5 rounded-2xl shadow-sm border ${item.resolved ? 'border-green-100' : 'border-gray-100'} relative group`}
                                 >
                                     <div className="flex items-start gap-4">
-                                        <div className={`p-3 rounded-full flex-shrink-0 cursor-pointer transition-colors ${item.resolved ? 'bg-green-100 text-green-600' : 'bg-rose-50 text-rose-500 hover:bg-green-50 hover:text-green-500'}`}
-                                            onClick={() => toggleResolve(item.id, !!item.resolved)}
-                                            title={item.resolved ? "Mark Unresolved" : "Mark Resolved"}
+                                        <div
+                                            className={`p-3 rounded-full flex-shrink-0 transition-colors ${item.resolved
+                                                    ? 'bg-green-100 text-green-600'
+                                                    : isAdmin
+                                                        ? 'bg-rose-50 text-rose-500 hover:bg-green-50 hover:text-green-500 cursor-pointer'
+                                                        : 'bg-rose-50 text-rose-500 opacity-50 cursor-not-allowed'
+                                                }`}
+                                            onClick={() => {
+                                                if (isAdmin) {
+                                                    toggleResolve(item.id, !!item.resolved);
+                                                } else if (!item.resolved) {
+                                                    alert('Only admins can mark complaints as resolved.');
+                                                }
+                                            }}
+                                            title={
+                                                item.resolved
+                                                    ? (isAdmin ? "Mark Unresolved" : "Resolved")
+                                                    : (isAdmin ? "Mark Resolved" : "Only admins can resolve")
+                                            }
                                         >
                                             {item.resolved ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
                                         </div>

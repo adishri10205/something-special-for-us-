@@ -87,6 +87,48 @@ export const EmotionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return () => unsubscribe();
     }, []);
 
+    // Real-time listener for complaints to auto-update complaint meter
+    useEffect(() => {
+        const complaintsRef = ref(db, 'complaints');
+
+        const unsubscribe = onValue(complaintsRef, async (snapshot) => {
+            if (snapshot.exists() && emotionProfile) {
+                const data = snapshot.val();
+                const complaints = Object.values(data) as any[];
+
+                // Count only unresolved complaints
+                const activeComplaints = complaints.filter(c => !c.resolved).length;
+
+                // Update complaint meter (cap at 100)
+                const complaintValue = Math.min(100, activeComplaints * 10);
+
+                // Only update if different
+                if (emotionProfile.meters.complaints !== complaintValue) {
+                    const newMeters = { ...emotionProfile.meters, complaints: complaintValue };
+                    const newMainProgress = calculateMainProgress(newMeters);
+
+                    await update(ref(db, 'emotionProfile'), {
+                        'meters/complaints': complaintValue,
+                        mainProgress: newMainProgress,
+                        lastUpdated: new Date().toISOString(),
+                    });
+                }
+            } else if (emotionProfile && emotionProfile.meters.complaints !== 0) {
+                // No complaints, set to 0
+                const newMeters = { ...emotionProfile.meters, complaints: 0 };
+                const newMainProgress = calculateMainProgress(newMeters);
+
+                await update(ref(db, 'emotionProfile'), {
+                    'meters/complaints': 0,
+                    mainProgress: newMainProgress,
+                    lastUpdated: new Date().toISOString(),
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [emotionProfile]);
+
     const hasAccess = emotionProfile
         ? emotionProfile.mainProgress >= emotionProfile.accessThreshold
         : true; // Default to true while loading
