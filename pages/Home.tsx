@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key, AlertCircle, Star, Activity, LockKeyhole } from 'lucide-react';
+import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key, AlertCircle, Star, Activity, LockKeyhole, MessageCircleQuestion } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useEmotion } from '../context/EmotionContext';
@@ -58,8 +58,8 @@ const cards = [
   },
   {
     to: '/notes',
-    title: 'Notes',
-    subtitle: 'Letters',
+    title: 'Special Message',
+    subtitle: 'Protected',
     icon: MessageCircle,
     gradient: 'from-amber-400 via-orange-500 to-red-500',
     shadow: 'shadow-orange-500/25',
@@ -127,6 +127,15 @@ const cards = [
     gradient: 'from-yellow-400 via-amber-500 to-orange-500',
     shadow: 'shadow-yellow-500/25',
     delay: 1.05
+  },
+  {
+    to: '/question-wall',
+    title: 'Question Wall',
+    subtitle: 'Unspoken',
+    icon: MessageCircleQuestion,
+    gradient: 'from-purple-500 via-violet-600 to-indigo-600',
+    shadow: 'shadow-purple-500/25',
+    delay: 1.1
   },
 ];
 
