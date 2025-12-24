@@ -1,8 +1,9 @@
 import React, { useState } from 'react'; // Added useState
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus, Key, AlertCircle, Star } from 'lucide-react'; // Added more icons
+import { Home, Heart, Image, Film, Music, Lock, MessageCircle, Youtube, LogOut, Menu, X, ArrowLeft, Bell, AlertTriangle, Link2, Book, Mic, Plus, Key, AlertCircle, Star, Activity } from 'lucide-react'; // Added more icons
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useEmotion } from '../context/EmotionContext';
 import { useHeader } from '../context/HeaderContext';
 import { useData } from '../context/DataContext';
 
@@ -12,6 +13,7 @@ const Navigation: React.FC = () => {
   const { logout, lockApp, isAppLocked, currentUser, isAdmin, hasPermission, clearSecurityAlerts } = useAuth();
   const { title, isMusicMode } = useHeader();
   const { appVersion } = useData();
+  const { hasAccess, emotionProfile } = useEmotion();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
   const [shouldHideNav, setShouldHideNav] = useState(false);
@@ -66,6 +68,7 @@ const Navigation: React.FC = () => {
 
   const links = [
     { to: '/home', icon: Home, label: 'Home' },
+    { to: '/emotion-profile', icon: Activity, label: 'Profile' },
     ...(hasPermission('canViewJourney') ? [{ to: '/journey', icon: Heart, label: 'Journey' }] : []),
     ...(hasPermission('canViewGallery') ? [{ to: '/gallery', icon: Image, label: 'Gallery' }] : []),
     ...(hasPermission('canViewReels') ? [{ to: '/reels', icon: Film, label: 'Reels' }] : []),
@@ -139,7 +142,7 @@ const Navigation: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <AnimatePresence>
-        {!shouldHideNav && (
+        {!shouldHideNav && (isAdmin || hasAccess) && (
           <motion.nav
             initial={{ x: -100 }}
             animate={{ x: 0 }}
@@ -235,7 +238,7 @@ const Navigation: React.FC = () => {
       </AnimatePresence>
 
       {/* Mobile Bottom Bar - Premium Floating Design */}
-      {!shouldHideNav && (
+      {!shouldHideNav && (isAdmin || hasAccess) && (
         <motion.nav
           initial={{ y: 100 }}
           animate={{ y: 0 }}
@@ -244,17 +247,25 @@ const Navigation: React.FC = () => {
           <div className="flex justify-around items-center w-full">
             {/* Show Priority Links for Mobile Bottom Bar (Home, Gallery, Reels, Music) */}
             {links.filter(l => ['/home', '/gallery', '/reels', '/music'].includes(l.to)).map((link) => {
+              const isLocked = !isAdmin && !hasAccess && link.to !== '/home' && link.to !== '/emotion-profile';
+
               return (
                 <NavLink
                   key={link.to}
-                  to={link.to}
+                  to={isLocked ? '#' : link.to}
                   onClick={(e) => {
+                    if (isLocked) {
+                      e.preventDefault();
+                      alert(`🔒 Access Locked!\n\nCurrent Progress: ${emotionProfile?.mainProgress || 0}%\nRequired: ${emotionProfile?.accessThreshold || 50}%\n\nImprove the friendship health to unlock!`);
+                      return;
+                    }
                     if (link.to === '/reels' && location.pathname === '/reels' && (isAdmin || hasPermission('canEditReels'))) {
                       e.preventDefault();
                       window.dispatchEvent(new CustomEvent('open-add-reel-modal'));
                     }
                   }}
-                  className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300"
+                  className={`relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300 ${isLocked ? 'opacity-40 cursor-not-allowed' : ''
+                    }`}
                 >
                   {({ isActive }) => (
                     <>
@@ -288,19 +299,6 @@ const Navigation: React.FC = () => {
                 </NavLink>
               )
             })}
-
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={lockApp}
-              className="relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl text-gray-500 hover:text-rose-500 active:scale-95 transition-all duration-200 group"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <Lock size={22} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-semibold tracking-wide opacity-70 group-hover:opacity-100 transition-opacity">
-                  Lock
-                </span>
-              </div>
-            </motion.button>
           </div>
 
           {/* Mobile FAB removed as per user request to integrate into nav bar */}
@@ -401,7 +399,7 @@ const Navigation: React.FC = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {/* Failed Attempts Warning */}
-              {currentUser?.failedMpinAttempts && currentUser.failedMpinAttempts >= 25 && (
+              {(currentUser?.failedMpinAttempts ?? 0) >= 25 && (
                 <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">

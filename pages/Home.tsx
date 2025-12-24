@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key, AlertCircle, Star } from 'lucide-react';
+import { Heart, Image, Film, Music, Lock, MessageCircle, Gift, Link2, Book, Youtube, Mic, Key, AlertCircle, Star, Activity, LockKeyhole } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useEmotion } from '../context/EmotionContext';
 import { useHeader } from '../context/HeaderContext';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../src/firebaseConfig';
 import InstallPrompt from '../components/InstallPrompt';
 
 const cards = [
-
   {
     to: '/journey',
     title: 'Journey',
@@ -136,11 +136,24 @@ const Home: React.FC = () => {
   const [clickCount, setClickCount] = useState(0);
   const { setTitle } = useHeader();
 
-  const { currentUser, hasPermission } = useAuth();
+  const { currentUser, hasPermission, isAdmin } = useAuth();
+  const { emotionProfile, hasAccess, loading: emotionLoading } = useEmotion();
 
   useEffect(() => {
     setTitle('Home');
   }, [setTitle]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 Emotion Debug:', {
+      isAdmin,
+      hasAccess,
+      emotionProfile,
+      mainProgress: emotionProfile?.mainProgress,
+      threshold: emotionProfile?.accessThreshold,
+      loading: emotionLoading
+    });
+  }, [isAdmin, hasAccess, emotionProfile, emotionLoading]);
 
   // Load Order from Firebase
   const [orderedCards, setOrderedCards] = useState(cards);
@@ -247,6 +260,7 @@ const Home: React.FC = () => {
           <span className="absolute top-2 right-2 w-2 md:w-2.5 h-2 md:h-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
         </Link>
       )}
+
       {/* TOP SECTION: Welcome & Status */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 md:gap-8 mb-6 md:mb-12 relative z-20">
 
@@ -281,58 +295,190 @@ const Home: React.FC = () => {
         </header>
       </div>
 
+      {/* Profile Card Banner - Below Welcome Message */}
+      {emotionProfile && !emotionLoading && (
+        <Link to="/emotion-profile">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="mb-6 p-6 rounded-3xl bg-gradient-to-br from-blue-900 via-indigo-800 to-blue-700 shadow-2xl border-2 border-white/20 cursor-pointer relative overflow-hidden"
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10 bg-noise mix-blend-overlay pointer-events-none" />
+
+            {/* Decorative Circles */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+
+            <div className="relative z-10 flex items-center gap-4 md:gap-6">
+              {/* Profile Photo */}
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/20 backdrop-blur-md border-4 border-white/30 shadow-xl overflow-hidden">
+                  {emotionProfile.profileImage ? (
+                    <img
+                      src={emotionProfile.profileImage}
+                      alt="Addi"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold">
+                      💖
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Profile Info */}
+              <div className="flex-1 min-w-0">
+                {/* Name & Mood */}
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-white font-bold text-lg md:text-xl truncate">
+                    Addi✨
+                  </h3>
+                  {/* Mood Emoji */}
+                  <span className="text-2xl" title={`Mood: ${emotionProfile.meters.mood > 50 ? 'Happy' :
+                    emotionProfile.meters.mood > 0 ? 'Normal' :
+                      emotionProfile.meters.mood > -50 ? 'Sad' : 'Angry'
+                    }`}>
+                    {emotionProfile.meters.mood > 50 ? '😊' :
+                      emotionProfile.meters.mood > 0 ? '😐' :
+                        emotionProfile.meters.mood > -50 ? '😢' : '😠'}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/90 text-xs md:text-sm font-medium">
+                      Friendship Health
+                    </span>
+                    <span className="text-white font-bold text-sm md:text-base">
+                      {emotionProfile.mainProgress}%
+                    </span>
+                  </div>
+                  <div className="relative h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${emotionProfile.mainProgress}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className={`h-full rounded-full ${emotionProfile.mainProgress >= 75
+                        ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                        : emotionProfile.mainProgress >= 50
+                          ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                          : emotionProfile.mainProgress >= 25
+                            ? 'bg-gradient-to-r from-orange-400 to-orange-500'
+                            : 'bg-gradient-to-r from-red-400 to-red-500'
+                        } shadow-lg`}
+                    />
+                  </div>
+                </div>
+
+                {/* Status Text */}
+                <div className="flex items-center gap-2">
+                  {hasAccess ? (
+                    <>
+                      <Lock className="text-white/80" size={14} />
+                      <p className="text-white/80 text-xs md:text-sm">
+                        Full Access {isAdmin && '(Admin)'}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <LockKeyhole className="text-white/80" size={14} />
+                      <p className="text-white/80 text-xs md:text-sm">
+                        Limited Access • Need {emotionProfile.accessThreshold}%
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* View Button */}
+              <div className="hidden md:flex flex-shrink-0">
+                <div className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-white font-semibold text-sm transition-all border border-white/30">
+                  View Profile →
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </Link>
+      )}
+
       {/* APPS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 pb-20 md:pb-24 mx-auto w-full">
-        {visibleCards.map((card, index) => (
-          <motion.div
-            key={card.to}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + index * 0.05, duration: 0.5, type: "spring", stiffness: 100 }}
-            whileHover={{
-              y: -5,
-              scale: 1.03,
-              transition: { type: "spring", stiffness: 300, damping: 20 }
-            }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full"
-          >
-            <Link
-              to={card.to}
-              className={`block aspect-[1.1/1] sm:aspect-[4/5] md:aspect-[3/4] rounded-2xl md:rounded-[2rem] bg-gradient-to-br ${card.gradient} shadow-md md:shadow-lg ${card.shadow} relative overflow-hidden group will-change-transform isolation-auto`}
+        {visibleCards.map((card, index) => {
+          // Check if card should be locked
+          const isLocked = !isAdmin && !hasAccess && !card.alwaysVisible;
+
+          return (
+            <motion.div
+              key={card.to}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + index * 0.05, duration: 0.5, type: "spring", stiffness: 100 }}
+              whileHover={!isLocked ? {
+                y: -5,
+                scale: 1.03,
+                transition: { type: "spring", stiffness: 300, damping: 20 }
+              } : {}}
+              whileTap={!isLocked ? { scale: 0.98 } : {}}
+              className="w-full"
             >
-              {/* Noise Texture */}
-              <div className="absolute inset-0 opacity-[0.03] bg-noise mix-blend-overlay pointer-events-none" />
+              <Link
+                to={isLocked ? '#' : card.to}
+                onClick={(e) => {
+                  if (isLocked) {
+                    e.preventDefault();
+                    alert(`🔒 Access Locked!\n\nCurrent Progress: ${emotionProfile?.mainProgress || 0}%\nRequired: ${emotionProfile?.accessThreshold || 50}%\n\nImprove the relationship health to unlock this feature!`);
+                  }
+                }}
+                className={`block aspect-[1.1/1] sm:aspect-[4/5] md:aspect-[3/4] rounded-2xl md:rounded-[2rem] bg-gradient-to-br ${card.gradient} shadow-md md:shadow-lg ${card.shadow} relative overflow-hidden group will-change-transform isolation-auto ${isLocked ? 'opacity-40 grayscale cursor-not-allowed' : ''
+                  }`}
+              >
+                {/* Noise Texture */}
+                <div className="absolute inset-0 opacity-[0.03] bg-noise mix-blend-overlay pointer-events-none" />
 
-              {/* Dynamic Content Container */}
-              <div className="absolute inset-0 p-3 md:p-6 flex flex-col justify-between z-10">
+                {/* Lock Overlay */}
+                {isLocked && (
+                  <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] z-20 flex items-center justify-center">
+                    <div className="bg-white/90 backdrop-blur-md p-4 md:p-6 rounded-2xl shadow-2xl">
+                      <LockKeyhole className="w-8 h-8 md:w-12 md:h-12 text-gray-700 mx-auto" />
+                      <p className="text-xs md:text-sm font-bold text-gray-700 mt-2 text-center">Locked</p>
+                    </div>
+                  </div>
+                )}
 
-                {/* Top Icon */}
-                <div className="self-start bg-white/20 backdrop-blur-md p-2 md:p-3 rounded-xl md:rounded-2xl shadow-inner border border-white/20 text-white group-hover:scale-110 transition-transform duration-300">
-                  <card.icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
+                {/* Dynamic Content Container */}
+                <div className="absolute inset-0 p-3 md:p-6 flex flex-col justify-between z-10">
+
+                  {/* Top Icon */}
+                  <div className="self-start bg-white/20 backdrop-blur-md p-2 md:p-3 rounded-xl md:rounded-2xl shadow-inner border border-white/20 text-white group-hover:scale-110 transition-transform duration-300">
+                    <card.icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
+                  </div>
+
+                  {/* Text Content */}
+                  <div>
+                    <h3 className="text-lg md:text-2xl font-bold text-white mb-0.5 md:mb-1 leading-none tracking-tight">
+                      {card.title}
+                    </h3>
+                    <p className="text-white/80 text-[10px] md:text-xs font-medium uppercase tracking-wider md:opacity-0 md:group-hover:opacity-100 md:-translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
+                      {card.subtitle}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Text Content */}
-                <div>
-                  <h3 className="text-lg md:text-2xl font-bold text-white mb-0.5 md:mb-1 leading-none tracking-tight">
-                    {card.title}
-                  </h3>
-                  <p className="text-white/80 text-[10px] md:text-xs font-medium uppercase tracking-wider md:opacity-0 md:group-hover:opacity-100 md:-translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-                    {card.subtitle}
-                  </p>
+                {/* Background Decorative Large Icon */}
+                <div className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 opacity-10 transform rotate-12 scale-[1.2] md:scale-125 group-hover:scale-150 group-hover:rotate-6 transition-all duration-700 ease-out z-0">
+                  <card.icon size={100} className="md:w-36 md:h-36" />
                 </div>
-              </div>
 
-              {/* Background Decorative Large Icon */}
-              <div className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 opacity-10 transform rotate-12 scale-[1.2] md:scale-125 group-hover:scale-150 group-hover:rotate-6 transition-all duration-700 ease-out z-0">
-                <card.icon size={100} className="md:w-36 md:h-36" />
-              </div>
-
-              {/* Shine Effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out pointer-events-none" />
-            </Link>
-          </motion.div>
-        ))}
+                {/* Shine Effect */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out pointer-events-none" />
+              </Link>
+            </motion.div>
+          );
+        })}
       </div>
       <InstallPrompt />
     </div >

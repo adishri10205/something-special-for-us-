@@ -57,7 +57,6 @@ const OurWishes: React.FC = () => {
             createdAt: new Date().toISOString(),
             createdBy: currentUser.uid,
             createdByName: currentUser.displayName || 'Anonymous',
-            createdByName: currentUser.displayName || 'Anonymous',
         };
 
         try {

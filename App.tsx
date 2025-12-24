@@ -5,6 +5,7 @@ import { DataProvider, useData } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { HeaderProvider } from './context/HeaderContext';
 import { AudioProvider } from './context/AudioContext';
+import { EmotionProvider } from './context/EmotionContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -27,6 +28,8 @@ const Admin = lazy(() => import('./pages/Admin'));
 const SecretMessage = lazy(() => import('./pages/SecretMessage'));
 const ComplainBox = lazy(() => import('./pages/ComplainBox'));
 const OurWishes = lazy(() => import('./pages/OurWishes'));
+const EmotionProfile = lazy(() => import('./pages/EmotionProfile'));
+const AccessDenied = lazy(() => import('./pages/AccessDenied'));
 
 const LoadingSpinner = () => (
   <div className="flex h-screen w-full items-center justify-center bg-rose-50">
@@ -64,6 +67,8 @@ const AppRoutes: React.FC = () => {
           <Route path="/secret-message" element={<ProtectedRoute><SecretMessage /></ProtectedRoute>} />
           <Route path="/complain" element={<ProtectedRoute><ComplainBox /></ProtectedRoute>} />
           <Route path="/wishes" element={<ProtectedRoute><OurWishes /></ProtectedRoute>} />
+          <Route path="/emotion-profile" element={<ProtectedRoute><EmotionProfile /></ProtectedRoute>} />
+          <Route path="/access-denied" element={<ProtectedRoute><AccessDenied /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/flipbook" element={<ProtectedRoute><Flipbook /></ProtectedRoute>} />
@@ -80,15 +85,17 @@ const App: React.FC = () => {
   return (
     <AppProvider>
       <AuthProvider>
-        <DataProvider>
-          <HeaderProvider>
-            <AudioProvider>
-              <HashRouter>
-                <AppRoutes />
-              </HashRouter>
-            </AudioProvider>
-          </HeaderProvider>
-        </DataProvider>
+        <EmotionProvider>
+          <DataProvider>
+            <HeaderProvider>
+              <AudioProvider>
+                <HashRouter>
+                  <AppRoutes />
+                </HashRouter>
+              </AudioProvider>
+            </HeaderProvider>
+          </DataProvider>
+        </EmotionProvider>
       </AuthProvider>
     </AppProvider>
   );

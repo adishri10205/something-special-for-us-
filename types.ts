@@ -251,3 +251,28 @@ export interface UserActivity {
   displayName?: string;
   photoURL?: string;
 }
+
+// Emotion Progress System
+export interface EmotionMeters {
+  mood: number; // -100 (Angry/Sad) to 100 (Happy/Normal)
+  trust: number; // 0 (Low Trust) to 100 (High Trust)
+  love: number; // 0 to 100 (My Love Meter for You)
+  complaints: number; // 0 (No complaints) to 100 (Many complaints) - negative impact
+}
+
+export interface EmotionProfile {
+  mainProgress: number; // 0 to 100 - Overall Relationship Health
+  meters: EmotionMeters;
+  accessThreshold: number; // Minimum mainProgress needed for full access (default: 50)
+  lastUpdated: string;
+  updatedBy?: string;
+  profileImage?: string; // URL to profile image (configurable in admin)
+  lockMessage?: string; // Custom message shown when access is denied
+}
+
+export interface EmotionAction {
+  type: 'mood_change' | 'trust_change' | 'love_change' | 'complaint_added' | 'complaint_resolved' | 'positive_action';
+  value: number; // Impact on the meter
+  description?: string;
+  timestamp: string;
+}

@@ -2,20 +2,23 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, Reorder } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useEmotion } from '../context/EmotionContext';
 import { db } from '../src/firebaseConfig';
 import { ref, onValue, update, remove, set } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
 import ChatFlowBuilder from '../components/ChatFlowBuilder';
 import MuxUploader from '../components/MuxUploader';
 import PermissionModal from '../components/PermissionModal';
+import EmotionAdminTab from '../components/EmotionAdminTab';
 
-type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout';
+type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat';
+
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -507,6 +510,7 @@ const Admin: React.FC = () => {
             {isAdmin && (
               <>
                 <TabButton id="users" icon={Users} label="User Management" />
+                <TabButton id="emotion" icon={Activity} label="Emotion Settings" />
                 <TabButton id="layout" icon={Layout} label="Home Layout" />
                 <TabButton id="settings" icon={PlayCircle} label="Startup Settings" />
                 <TabButton id="intro" icon={Sparkles} label="Intro Flow" />
@@ -545,6 +549,11 @@ const Admin: React.FC = () => {
           {/* HOME LAYOUT TAB */}
           {activeTab === 'layout' && (
             <HomeLayoutEditor />
+          )}
+
+          {/* EMOTION SETTINGS TAB */}
+          {activeTab === 'emotion' && (
+            <EmotionAdminTab />
           )}
 
           {/* CHAT FLOW TAB */}
