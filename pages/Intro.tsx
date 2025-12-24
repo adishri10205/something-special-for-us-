@@ -183,6 +183,109 @@ const Intro: React.FC = () => {
           </motion.div>
         );
 
+      case 'video':
+        return (
+          <motion.div
+            key={step.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="z-10 flex flex-col items-center text-center px-6 max-w-2xl w-full"
+          >
+            {step.title && (
+              <h2 className="text-2xl md:text-3xl text-rose-700 font-bold mb-4 whitespace-pre-line">
+                {step.title}
+              </h2>
+            )}
+
+            {step.mediaUrl && (
+              <div className="w-full max-w-xl mb-6 rounded-xl overflow-hidden shadow-2xl">
+                {step.mediaUrl.includes('http') ? (
+                  <video
+                    src={step.mediaUrl}
+                    controls
+                    autoPlay
+                    className="w-full"
+                  />
+                ) : (
+                  // Assume it's a Mux Playback ID
+                  <div className="aspect-video bg-black">
+                    <iframe
+                      src={`https://stream.mux.com/${step.mediaUrl}.html?autoplay=true`}
+                      className="w-full h-full"
+                      allow="autoplay; fullscreen"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step.content && (
+              <p className="text-rose-800 text-lg mb-8 whitespace-pre-line">
+                {step.content}
+              </p>
+            )}
+
+            <motion.button
+              onClick={handleNext}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all"
+            >
+              {step.buttonText || 'Continue ➡️'}
+            </motion.button>
+          </motion.div>
+        );
+
+      case 'audio':
+        return (
+          <motion.div
+            key={step.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="z-10 flex flex-col items-center text-center px-6 max-w-lg w-full"
+          >
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-8 shadow-xl w-full">
+              {step.title && (
+                <h2 className="text-2xl md:text-3xl text-rose-700 font-bold mb-4 whitespace-pre-line">
+                  {step.title}
+                </h2>
+              )}
+
+              <div className="mb-6">
+                <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-4xl">🎵</span>
+                </div>
+                {step.mediaUrl && (
+                  <audio
+                    src={step.mediaUrl}
+                    controls
+                    autoPlay
+                    className="w-full"
+                  />
+                )}
+              </div>
+
+              {step.content && (
+                <p className="text-rose-800 text-lg mb-6 whitespace-pre-line">
+                  {step.content}
+                </p>
+              )}
+
+              <motion.button
+                onClick={handleNext}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all w-full"
+              >
+                {step.buttonText || 'Next ➡️'}
+              </motion.button>
+            </div>
+          </motion.div>
+        );
+
       case 'chat':
         return (
           <motion.div

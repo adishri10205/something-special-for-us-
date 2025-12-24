@@ -1,13 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, Reorder } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../src/firebaseConfig';
-import { ref, onValue, update, remove } from 'firebase/database';
+import { ref, onValue, update, remove, set } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
@@ -15,7 +15,7 @@ import ChatFlowBuilder from '../components/ChatFlowBuilder';
 import MuxUploader from '../components/MuxUploader';
 import PermissionModal from '../components/PermissionModal';
 
-type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users';
+type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout';
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -39,6 +39,7 @@ const Admin: React.FC = () => {
     welcomeMessage, setWelcomeMessage,
     homeCaption, setHomeCaption,
     appVersion, setAppVersion,
+    maintenanceMode, setMaintenanceMode,
 
   } = useData();
 
@@ -506,6 +507,7 @@ const Admin: React.FC = () => {
             {isAdmin && (
               <>
                 <TabButton id="users" icon={Users} label="User Management" />
+                <TabButton id="layout" icon={Layout} label="Home Layout" />
                 <TabButton id="settings" icon={PlayCircle} label="Startup Settings" />
                 <TabButton id="intro" icon={Sparkles} label="Intro Flow" />
                 <TabButton id="chat" icon={MessageCircle} label="Chat Flow" />
@@ -538,6 +540,12 @@ const Admin: React.FC = () => {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">
+
+
+          {/* HOME LAYOUT TAB */}
+          {activeTab === 'layout' && (
+            <HomeLayoutEditor />
+          )}
 
           {/* CHAT FLOW TAB */}
           {activeTab === 'chat' && (
@@ -999,6 +1007,8 @@ const Admin: React.FC = () => {
                       <option value="greeting">Greeting Card</option>
                       <option value="meme">Meme / Visual</option>
                       <option value="image">Image</option>
+                      <option value="video">Video (Mux/URL)</option>
+                      <option value="audio">Audio / Voice Note</option>
                       <option value="quiz">Quiz Question</option>
                       <option value="chat">Chat Verification</option>
                     </select>
@@ -1024,10 +1034,20 @@ const Admin: React.FC = () => {
                     </div>
                   )}
 
-                  {(newStep.type === 'meme' || newStep.type === 'image') && (
+                  {(newStep.type === 'meme' || newStep.type === 'image' || newStep.type === 'video' || newStep.type === 'audio') && (
                     <div className="col-span-full">
-                      <label className="block text-xs font-bold text-gray-500 mb-1">Image / PDF URL</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        {newStep.type === 'video' ? 'Video URL (Mux Playback ID or URL)' :
+                          newStep.type === 'audio' ? 'Audio URL (Google Drive or Direct Link)' :
+                            'Image / PDF URL'}
+                      </label>
                       <input className="w-full p-2 border rounded" placeholder="https://..." value={newStep.mediaUrl || ''} onChange={e => setNewStep({ ...newStep, mediaUrl: e.target.value })} />
+                      {newStep.type === 'video' && (
+                        <p className="text-xs text-gray-400 mt-1">Enter Mux Playback ID (e.g., abc123xyz) or full video URL</p>
+                      )}
+                      {newStep.type === 'audio' && (
+                        <p className="text-xs text-gray-400 mt-1">Google Drive link or direct audio file URL</p>
+                      )}
                     </div>
                   )}
 
@@ -1161,6 +1181,63 @@ const Admin: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Clears both global (DB) and local (this browser) seen history. Refresh if status doesn't update immediately.</p>
+                </div>
+
+                {/* Maintenance Mode Section */}
+                <div className="border-t pt-6">
+                  <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <Settings size={20} className="text-orange-500" />
+                    Maintenance Mode
+                  </h3>
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-orange-800 mb-2">
+                      <strong>⚠️ When enabled:</strong> Only admins can access the app. All other users will see a maintenance page.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Enable/Disable Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <label className="font-bold text-gray-700">Enable Maintenance Mode</label>
+                        <p className="text-xs text-gray-500 mt-1">Block non-admin access to the app</p>
+                      </div>
+                      <button
+                        onClick={() => setMaintenanceMode({ ...maintenanceMode, enabled: !maintenanceMode.enabled })}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${maintenanceMode.enabled ? 'bg-orange-500' : 'bg-gray-300'}`}
+                      >
+                        <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform ${maintenanceMode.enabled ? 'translate-x-7' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* Custom Message */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Maintenance Message</label>
+                      <textarea
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                        rows={3}
+                        value={maintenanceMode.message}
+                        onChange={e => setMaintenanceMode({ ...maintenanceMode, message: e.target.value })}
+                        placeholder="We are currently performing maintenance..."
+                      />
+                    </div>
+
+                    {/* Image URL */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Image URL (Optional)</label>
+                      <input
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                        value={maintenanceMode.imageUrl || ''}
+                        onChange={e => setMaintenanceMode({ ...maintenanceMode, imageUrl: e.target.value })}
+                        placeholder="https://..."
+                      />
+                      {maintenanceMode.imageUrl && (
+                        <div className="mt-2">
+                          <img src={maintenanceMode.imageUrl} alt="Preview" className="max-w-xs rounded-lg border" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Manage Admins - New Section */}
@@ -2169,5 +2246,73 @@ function SparklesIcon(props: any) {
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M9 3v4" /><path d="M3 5h4" /><path d="M3 9h4" /></svg>
   );
 }
+
+const HomeLayoutEditor: React.FC = () => {
+  const [items, setItems] = useState([
+    { id: '/journey', text: 'Journey (Our Story)' },
+    { id: '/gallery', text: 'Gallery (Memories)' },
+    { id: '/reels', text: 'Reels (Moments)' },
+    { id: '/videos', text: 'Videos (Watch Together)' },
+    { id: '/music', text: 'Music (Playlist)' },
+    { id: '/notes', text: 'Notes (Letters)' },
+    { id: '/vault', text: 'Vault (Private)' },
+    { id: '/links', text: 'Links (Important)' },
+    { id: '/flipbook', text: 'Storybook (Our Album)' },
+    { id: '/voice-notes', text: 'Voice Notes (Conversations)' },
+    { id: '/secret-message', text: 'Secret (Confidential)' },
+    { id: '/complain', text: 'Complain (Issues)' },
+    { id: '/wishes', text: 'Our Wishes (Dreams)' },
+  ]);
+
+  useEffect(() => {
+    const orderRef = ref(db, 'settings/cardOrder');
+    onValue(orderRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const savedOrder: string[] = snapshot.val();
+        setItems(prev => {
+          const newOrder = [...prev].sort((a, b) => {
+            const indexA = savedOrder.indexOf(a.id);
+            const indexB = savedOrder.indexOf(b.id);
+            const valA = indexA !== -1 ? indexA : 999;
+            const valB = indexB !== -1 ? indexB : 999;
+            return valA - valB;
+          });
+          return newOrder;
+        });
+      }
+    }, { onlyOnce: true });
+  }, []);
+
+  const handleReorder = (newOrder: typeof items) => {
+    setItems(newOrder);
+    const orderIds = newOrder.map(item => item.id);
+    set(ref(db, 'settings/cardOrder'), orderIds);
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-2xl font-bold">Home Screen Layout</h2>
+        <p className="text-gray-500 text-sm">Drag and drop items to reorder them on the Home screen for everyone.</p>
+      </div>
+
+      <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="space-y-2">
+        {items.map((item) => (
+          <Reorder.Item key={item.id} value={item}>
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors">
+              <div className="text-gray-400">
+                <Layout size={20} />
+              </div>
+              <span className="font-semibold text-gray-700">{item.text}</span>
+              <div className="ml-auto text-gray-300">
+                <MoveUp size={16} className="rotate-45" />
+              </div>
+            </div>
+          </Reorder.Item>
+        ))}
+      </Reorder.Group>
+    </div>
+  );
+};
 
 export default Admin;

@@ -142,6 +142,32 @@ const Home: React.FC = () => {
     setTitle('Home');
   }, [setTitle]);
 
+  // Load Order from Firebase
+  const [orderedCards, setOrderedCards] = useState(cards);
+
+  useEffect(() => {
+    const orderRef = ref(db, 'settings/cardOrder');
+    const unsubscribe = onValue(orderRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const savedOrder: string[] = snapshot.val();
+        // Reconstruct the array based on saved IDs (paths 'to')
+        const newOrder = [...cards].sort((a, b) => {
+          const indexA = savedOrder.indexOf(a.to);
+          const indexB = savedOrder.indexOf(b.to);
+          // If found in saved order, use that index. Otherwise push to end.
+          const valA = indexA !== -1 ? indexA : 999;
+          const valB = indexB !== -1 ? indexB : 999;
+          return valA - valB;
+        });
+        setOrderedCards(newOrder);
+      } else {
+        setOrderedCards(cards);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleSecretClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
@@ -173,13 +199,11 @@ const Home: React.FC = () => {
   }
 
   // Filter cards based on visibility from Context AND User Permissions
-  const visibleCards = cards.filter(card => {
+  const visibleCards = orderedCards.filter(card => {
     // 1. Check Global Visibilty
     if (cardVisibility[card.to] === false) return false;
 
     // 2. Check User Permission
-    // If user is Admin, hasPermission returns true automatically.
-    // If no user, hasPermission returns false.
     switch (card.to) {
       case '/journey': return hasPermission('canViewJourney');
       case '/gallery': return hasPermission('canViewGallery');

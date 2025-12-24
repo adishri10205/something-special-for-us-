@@ -4,11 +4,17 @@ import Navigation from './Navigation';
 import FloatingHearts from './FloatingHearts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHeader } from '../context/HeaderContext';
+import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import GlobalMusicPlayer from './GlobalMusicPlayer';
+import Maintenance from '../pages/Maintenance';
+
 const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isMusicMode } = useHeader();
+  const { maintenanceMode } = useData();
+  const { isAdmin } = useAuth();
   const [shouldHideNav, setShouldHideNav] = React.useState(false);
 
   React.useEffect(() => {
@@ -23,6 +29,11 @@ const Layout: React.FC = () => {
       navigate('/music', { replace: true });
     }
   }, [isMusicMode, location.pathname, navigate]);
+
+  // Check if maintenance mode is enabled and user is not admin
+  if (maintenanceMode.enabled && !isAdmin) {
+    return <Maintenance />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans selection:bg-rose-200 overflow-hidden relative">

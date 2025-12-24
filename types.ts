@@ -142,7 +142,7 @@ export interface StartupSettings {
   hasSeen: boolean;
 }
 
-export type IntroStepType = 'greeting' | 'text' | 'image' | 'quiz' | 'meme' | 'chat';
+export type IntroStepType = 'greeting' | 'text' | 'image' | 'quiz' | 'meme' | 'chat' | 'video' | 'audio';
 
 export interface IntroStep {
   id: string;

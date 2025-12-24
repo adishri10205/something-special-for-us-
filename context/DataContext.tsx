@@ -90,6 +90,12 @@ interface DataContextType {
   login: (password: string) => boolean;
   logout: () => void;
   migrateData: () => Promise<void>;
+  maintenanceMode: {
+    enabled: boolean;
+    message: string;
+    imageUrl?: string;
+  };
+  setMaintenanceMode: (mode: { enabled: boolean; message: string; imageUrl?: string }) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -122,6 +128,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [voiceNotes, _setVoiceNotes] = useState<VoiceNote[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [maintenanceMode, _setMaintenanceMode] = useState({
+    enabled: false,
+    message: 'We are currently performing maintenance. Please check back soon!',
+    imageUrl: ''
+  });
 
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
@@ -195,6 +206,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (val.vaultPin) _setVaultPin(val.vaultPin);
           if (val.startupSettings) _setStartupSettings({ ...DEFAULT_STARTUP_SETTINGS, ...val.startupSettings });
           if (val.introFlow) _setIntroFlow(val.introFlow);
+          if (val.maintenanceMode) _setMaintenanceMode(val.maintenanceMode);
         }
         setIsLoadingSettings(false);
       })
@@ -205,9 +217,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- WRITE HELPERS ---
   const updateDb = (path: string, data: any) => {
+    console.log('updateDb called:', { path, authIsAdmin, currentUser: currentUser?.email });
     if (authIsAdmin) {
       set(ref(db, path), data);
     } else {
+      console.error('Update blocked - not admin:', { authIsAdmin, currentUser: currentUser?.email });
       alert("Only admins can modify content.");
     }
   };
@@ -236,6 +250,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setIntroFlow = (flow: IntroStep[]) => updateDb('settings/introFlow', flow);
   const setChatSteps = (flow: ChatStep[]) => updateDb('settings/chatSteps', flow);
   const setAdminEmails = (emails: string[]) => updateDb('settings/adminEmails', emails);
+  const setMaintenanceMode = (mode: { enabled: boolean; message: string; imageUrl?: string }) => updateDb('settings/maintenanceMode', mode);
 
   const markIntroSeen = () => {
     // We only update the global 'hasSeen' to indicate at least one person has seen it, 
@@ -310,7 +325,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       logout: authLogout,
       migrateData,
-      voiceNotes, setVoiceNotes
+      voiceNotes, setVoiceNotes,
+      maintenanceMode, setMaintenanceMode
     }}>
       {children}
     </DataContext.Provider>
