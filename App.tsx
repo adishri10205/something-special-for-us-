@@ -1,12 +1,17 @@
 import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { HeaderProvider, useHeader } from './context/HeaderContext';
+import { AudioProvider } from './context/AudioContext';
+import { EmotionProvider } from './context/EmotionContext';
 import Layout from './components/Layout';
-import { AppState } from './types';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy Load Pages for Performance Optimization
 const Intro = lazy(() => import('./pages/Intro'));
+const Login = lazy(() => import('./pages/Login'));
 const Home = lazy(() => import('./pages/Home'));
 const Timeline = lazy(() => import('./pages/Timeline'));
 const Gallery = lazy(() => import('./pages/Gallery'));
@@ -17,15 +22,14 @@ const Notes = lazy(() => import('./pages/Notes'));
 const Vault = lazy(() => import('./pages/Vault'));
 const Links = lazy(() => import('./pages/Links'));
 const Flipbook = lazy(() => import('./pages/Flipbook'));
+const Videos = lazy(() => import('./pages/Videos'));
+const VoiceNotes = lazy(() => import('./pages/VoiceNotes'));
 const Admin = lazy(() => import('./pages/Admin'));
-
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { appState } = useApp();
-  if (appState === AppState.INTRO) {
-    return <Navigate to="/" replace />;
-  }
-  return <>{children}</>;
-};
+const SecretMessage = lazy(() => import('./pages/SecretMessage'));
+const ComplainBox = lazy(() => import('./pages/ComplainBox'));
+const OurWishes = lazy(() => import('./pages/OurWishes'));
+const EmotionProfile = lazy(() => import('./pages/EmotionProfile'));
+const AccessDenied = lazy(() => import('./pages/AccessDenied'));
 
 const LoadingSpinner = () => (
   <div className="flex h-screen w-full items-center justify-center bg-rose-50">
@@ -34,23 +38,41 @@ const LoadingSpinner = () => (
 );
 
 const AppRoutes: React.FC = () => {
+  const { currentUser } = useAuth();
+  const { title } = useHeader();
+
+  React.useEffect(() => {
+    if (title) {
+      document.title = title;
+    }
+  }, [title]);
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
         <Route path="/" element={<Intro />} />
+        {/* Redirect to home if already logged in */}
+        <Route path="/login" element={<Login />} />
 
         <Route element={<Layout />}>
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/journey" element={<ProtectedRoute><Timeline /></ProtectedRoute>} />
           <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
           <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
+          <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
+          <Route path="/voice-notes" element={<ProtectedRoute><VoiceNotes /></ProtectedRoute>} />
           <Route path="/music" element={<ProtectedRoute><MusicPage /></ProtectedRoute>} />
           <Route path="/special" element={<ProtectedRoute><Message /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+          <Route path="/secret-message" element={<ProtectedRoute><SecretMessage /></ProtectedRoute>} />
+          <Route path="/complain" element={<ProtectedRoute><ComplainBox /></ProtectedRoute>} />
+          <Route path="/wishes" element={<ProtectedRoute><OurWishes /></ProtectedRoute>} />
+          <Route path="/emotion-profile" element={<ProtectedRoute><EmotionProfile /></ProtectedRoute>} />
+          <Route path="/access-denied" element={<ProtectedRoute><AccessDenied /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/flipbook" element={<ProtectedRoute><Flipbook /></ProtectedRoute>} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -62,11 +84,19 @@ const AppRoutes: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AppProvider>
-      <DataProvider>
-        <HashRouter>
-          <AppRoutes />
-        </HashRouter>
-      </DataProvider>
+      <AuthProvider>
+        <EmotionProvider>
+          <DataProvider>
+            <HeaderProvider>
+              <AudioProvider>
+                <HashRouter>
+                  <AppRoutes />
+                </HashRouter>
+              </AudioProvider>
+            </HeaderProvider>
+          </DataProvider>
+        </EmotionProvider>
+      </AuthProvider>
     </AppProvider>
   );
 };

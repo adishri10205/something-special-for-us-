@@ -9,8 +9,13 @@ export interface TimelineEvent {
 
 export interface GalleryImage {
   id: string;
-  url: string;
+  url?: string;
+  publicId?: string;
+  folder?: string; // App-level Folder
+  width?: number;
+  height?: number;
   caption?: string;
+  createdAt?: string;
 }
 
 export interface Reel {
@@ -19,6 +24,8 @@ export interface Reel {
   thumbnail: string;
   caption: string;
   likes: number;
+  title?: string;
+  uploadedBy?: string;
 }
 
 export interface Track {
@@ -27,10 +34,13 @@ export interface Track {
   artist: string;
   duration: string;
   cover: string;
+  url?: string; // Audio Source URL (Drive/External)
+  addedBy?: string; // 'aditya' | 'shruti' | 'unknown'
 }
 
 export interface Note {
   id: string;
+  title?: string;
   author: 'Me' | 'You';
   text: string;
   date: string;
@@ -57,6 +67,63 @@ export interface FlipbookPage {
   caption?: string;
 }
 
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  role: 'admin' | 'user';
+  permissions?: string[]; // ['edit_cards', 'manage_users', 'view_vault']
+  canEditCards?: boolean;
+  mpin?: string; // Security MPIN
+  mpinResetRequested?: boolean; // User requested reset
+  canChangeMpin?: boolean; // Admin allowed change
+  failedMpinAttempts?: number;
+  lastFailedMpinAttempt?: string;
+  status?: UserStatusType;
+  lastSeen?: string;
+  customPermissions?: UserPermissions;
+  mood?: string;
+}
+
+export interface UserPermissions {
+  // Edit Permissions
+  canEditTimeline?: boolean;
+  canEditGallery?: boolean;
+  canEditReels?: boolean;
+  canEditMusic?: boolean;
+  canEditNotes?: boolean;
+  canEditFlipbook?: boolean;
+  canEditVoiceNotes?: boolean;
+
+  // View Permissions
+  canViewJourney?: boolean;
+  canViewGallery?: boolean;
+  canViewReels?: boolean;
+  canViewVideos?: boolean;
+  canViewMusic?: boolean;
+  canViewNotes?: boolean;
+  canViewFlipbook?: boolean;
+  canViewVoiceNotes?: boolean;
+  canViewVault?: boolean;
+  canViewAdmin?: boolean;
+  canViewMessages?: boolean;
+  canViewSecretMessage?: boolean;
+
+  // Special Permissions
+  canDeleteReels?: boolean;
+  canAddReels?: boolean;
+  canDeleteNotes?: boolean;
+  canViewComplaints?: boolean;
+  canAddComplaints?: boolean;
+
+  canDeleteComplaints?: boolean;
+  canViewWishes?: boolean;
+  canAddWishes?: boolean;
+  canEditWishes?: boolean;
+  canDeleteWishes?: boolean;
+}
+
 export interface CardVisibility {
   [key: string]: boolean;
 }
@@ -73,4 +140,139 @@ export interface StartupSettings {
   mode: StartupMode;
   showOnce: boolean;
   hasSeen: boolean;
+}
+
+export type IntroStepType = 'greeting' | 'text' | 'image' | 'quiz' | 'meme' | 'chat' | 'video' | 'audio';
+
+export interface IntroStep {
+  id: string;
+  type: IntroStepType;
+  title?: string;
+  content?: string; // Text content or Question
+  mediaUrl?: string; // Image/Gif URL
+  options?: string[]; // For quiz
+  correctAnswer?: string; // For quiz
+  buttonText?: string;
+}
+
+export type ChatStepType = 'text' | 'image' | 'gif' | 'link' | 'options' | 'end' | 'login';
+
+export interface ChatStep {
+  id: string;
+  order: number;
+  type?: ChatStepType;      // Default 'text'
+  question: string;         // The bot's question / text
+  expectedAnswer: string;   // The expected keyword/answer
+  successReply: string;     // Bot reply on success
+  failureReply: string;     // Bot reply on failure (supports {input} placeholder)
+  warningMessage?: string;  // Custom warning message for WARNING_ONLY or BAN_DEVICE modes
+
+  // New Fields
+  mediaUrl?: string;        // For 'image' type
+  linkUrl?: string;         // For 'link' type
+  linkText?: string;        // Button text for 'link' type
+  options?: string[];       // For 'options' type (Quick Replies)
+  inputRequired?: boolean;  // If false, treats as statement and auto-advances
+  matchType?: 'exact' | 'contains'; // Validation strictness
+
+  // Flow Logic
+  nextStepId?: string;          // Default next step
+  failureNextStepId?: string;   // Step to go to on failure
+  branches?: {                  // For 'options' type: map option text to next step ID
+    label: string;
+    nextStepId: string;
+  }[];
+  position?: { x: number; y: number }; // For React Flow GUI
+  variable?: string;            // Variable name to store user answer (e.g. 'name' -> {name})
+  maxAttempts?: number;         // Max retries before ban (for WARNING_ONLY mode)
+  showGoogleLogin?: boolean;    // Show Google Login button
+}
+
+export interface WishItem {
+  id: string;
+  type: 'image' | 'video' | 'audio' | 'url';
+  url: string;
+  caption?: string;
+  thumbnail?: string; // For video/url
+}
+
+export interface WishFolder {
+  id: string;
+  title: string;
+  items: WishItem[];
+}
+
+export interface YoutubeVideo {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string;
+  addedAt: string;
+}
+
+export interface VoiceNote {
+  id: string;
+  title: string;
+  url: string; // Google Drive Link
+  createdAt: string;
+  createdBy?: string;
+}
+
+export type UserStatusType = 'online' | 'offline' | 'away' | 'busy';
+
+
+export interface Complaint {
+  id: string;
+  text: string;
+  category: 'Partners' | 'Both';
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  resolved?: boolean;
+}
+
+
+export interface OurWish {
+  id: string;
+  text: string;
+  status: 'pending' | 'fulfilled';
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+export interface UserActivity {
+  status: UserStatusType;
+  lastSeen: string;
+  currentPage?: string;
+  mood?: string;
+  customStatus?: string;
+  displayName?: string;
+  photoURL?: string;
+}
+
+// Emotion Progress System
+export interface EmotionMeters {
+  mood: number; // -100 (Angry/Sad) to 100 (Happy/Normal)
+  trust: number; // 0 (Low Trust) to 100 (High Trust)
+  love: number; // 0 to 100 (My Love Meter for You)
+  complaints: number; // 0 (No complaints) to 100 (Many complaints) - negative impact
+}
+
+export interface EmotionProfile {
+  mainProgress: number; // 0 to 100 - Overall Relationship Health
+  meters: EmotionMeters;
+  accessThreshold: number; // Minimum mainProgress needed for full access (default: 50)
+  lastUpdated: string;
+  updatedBy?: string;
+  profileImage?: string; // URL to profile image (configurable in admin)
+  lockMessage?: string; // Custom message shown when access is denied
+}
+
+export interface EmotionAction {
+  type: 'mood_change' | 'trust_change' | 'love_change' | 'complaint_added' | 'complaint_resolved' | 'positive_action';
+  value: number; // Impact on the meter
+  description?: string;
+  timestamp: string;
 }

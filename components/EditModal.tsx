@@ -32,12 +32,12 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, type, da
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
-          
+
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -93,6 +93,14 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, type, da
                     <input className="w-full p-2 border rounded-lg" value={formData.videoUrl || ''} onChange={e => handleChange('videoUrl', e.target.value)} />
                   </div>
                   <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Title</label>
+                    <input className="w-full p-2 border rounded-lg" value={formData.title || ''} onChange={e => handleChange('title', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Author</label>
+                    <input className="w-full p-2 border rounded-lg" value={formData.uploadedBy || ''} onChange={e => handleChange('uploadedBy', e.target.value)} />
+                  </div>
+                  <div>
                     <label className="text-xs font-bold text-gray-500 uppercase">Caption</label>
                     <input className="w-full p-2 border rounded-lg" value={formData.caption || ''} onChange={e => handleChange('caption', e.target.value)} />
                   </div>
@@ -123,11 +131,11 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, type, da
                     <textarea className="w-full p-2 border rounded-lg" rows={4} value={formData.text || ''} onChange={e => handleChange('text', e.target.value)} />
                   </div>
                   <div>
-                     <label className="text-xs font-bold text-gray-500 uppercase">Author</label>
-                     <select className="w-full p-2 border rounded-lg" value={formData.author || 'Me'} onChange={e => handleChange('author', e.target.value)}>
-                        <option value="Me">Me</option>
-                        <option value="You">You</option>
-                     </select>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Author</label>
+                    <select className="w-full p-2 border rounded-lg" value={formData.author || 'Me'} onChange={e => handleChange('author', e.target.value)}>
+                      <option value="Me">Me</option>
+                      <option value="You">You</option>
+                    </select>
                   </div>
                 </>
               )}
