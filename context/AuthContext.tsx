@@ -4,7 +4,7 @@ import { auth, googleProvider, db, firebaseConfig } from '../src/firebaseConfig'
 import { signInWithPopup, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, UserCredential, getAuth } from 'firebase/auth';
 import { ref, get, set, child, onValue, update } from 'firebase/database';
 import { UserProfile } from '../types';
-import { INITIAL_ADMIN_EMAILS } from '../constants';
+import { INITIAL_ADMIN_EMAILS, DEFAULT_MAX_ATTEMPTS } from '../constants';
 
 interface AuthContextType {
     currentUser: UserProfile | null;
@@ -334,6 +334,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!currentUser?.mpin) return false;
 
         if (currentUser.mpin === mpin) {
+            // Reset failure count on success
+            if (currentUser.failedMpinAttempts && currentUser.failedMpinAttempts > 0) {
+                await update(ref(db, `users/${currentUser.uid}`), {
+                    failedMpinAttempts: 0,
+                    lastFailedMpinAttempt: null
+                });
+                // Update local state immediately
+                setCurrentUser(prev => prev ? { ...prev, failedMpinAttempts: 0, lastFailedMpinAttempt: undefined } : null);
+            }
+
             setIsAppLocked(false);
             return true;
         } else {
@@ -341,12 +351,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (currentUser.uid) {
                 const failedCount = (currentUser.failedMpinAttempts || 0) + 1;
                 const failTime = new Date().toLocaleString();
+
                 await update(ref(db, `users/${currentUser.uid}`), {
                     failedMpinAttempts: failedCount,
                     lastFailedMpinAttempt: failTime
                 });
                 // Update local state to show alert immediately
                 setCurrentUser(prev => prev ? { ...prev, failedMpinAttempts: failedCount, lastFailedMpinAttempt: failTime } : null);
+
+                // Check for Ban
+                try {
+                    const settingsSnap = await get(ref(db, 'settings/maxMpinAttempts'));
+                    const maxAttempts = settingsSnap.exists() ? settingsSnap.val() : DEFAULT_MAX_ATTEMPTS;
+
+                    if (failedCount >= maxAttempts) {
+                        await banCurrentDevice("Maximum MPIN attempts exceeded.");
+                    }
+                } catch (e) {
+                    console.error("Failed to check max attempts", e);
+                }
             }
             return false;
         }

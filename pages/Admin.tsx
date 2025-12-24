@@ -17,7 +17,7 @@ import MuxUploader from '../components/MuxUploader';
 import PermissionModal from '../components/PermissionModal';
 import EmotionAdminTab from '../components/EmotionAdminTab';
 
-type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat';
+type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat' | 'security';
 
 
 const Admin: React.FC = () => {
@@ -43,7 +43,7 @@ const Admin: React.FC = () => {
     homeCaption, setHomeCaption,
     appVersion, setAppVersion,
     maintenanceMode, setMaintenanceMode,
-
+    maxMpinAttempts, setMaxMpinAttempts
   } = useData();
 
   const { isAdmin, loginWithGoogle, logout, currentUser, signupWithEmail, hasPermission } = useAuth();
@@ -515,6 +515,7 @@ const Admin: React.FC = () => {
                 <TabButton id="settings" icon={PlayCircle} label="Startup Settings" />
                 <TabButton id="intro" icon={Sparkles} label="Intro Flow" />
                 <TabButton id="chat" icon={MessageCircle} label="Chat Flow" />
+                <TabButton id="security" icon={Lock} label="Security" />
               </>
             )}
 
@@ -554,6 +555,39 @@ const Admin: React.FC = () => {
           {/* EMOTION SETTINGS TAB */}
           {activeTab === 'emotion' && (
             <EmotionAdminTab />
+          )}
+
+          {/* SECURITY TAB */}
+          {activeTab === 'security' && (
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+                  <div className="bg-rose-100 p-2 rounded-lg text-rose-600"><Lock size={24} /></div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Security Settings</h2>
+                    <p className="text-sm text-gray-500">Manage access control and protection.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Max Login Attempts (MPIN)</label>
+                    <p className="text-xs text-gray-500 mb-2">Number of failed pin entries before the device is automatically banned.</p>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="number"
+                        min={3}
+                        max={50}
+                        className="w-24 p-2 border rounded-lg font-bold text-center"
+                        value={maxMpinAttempts}
+                        onChange={(e) => setMaxMpinAttempts(Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400">Default: 5</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* CHAT FLOW TAB */}
