@@ -19,8 +19,11 @@ const Intro: React.FC = () => {
   const [securityState, setSecurityState] = useState<'idle' | 'checking' | 'verified' | 'failed'>('idle');
   const [isSkipping, setIsSkipping] = useState(true);
 
+  // Filter out disabled steps
+  const activeFlow = introFlow ? introFlow.filter(step => !step.disabled) : [];
+
   // If no flow defined, create a minimal default to prevent errors
-  const safeFlow: IntroStep[] = introFlow && introFlow.length > 0 ? introFlow : [
+  const safeFlow: IntroStep[] = activeFlow.length > 0 ? activeFlow : [
     { id: 'default', type: 'greeting', title: 'Happy Birthday', content: 'Welcome!', buttonText: 'Start' }
   ];
 
@@ -206,7 +209,7 @@ const Intro: React.FC = () => {
                     src={step.mediaUrl}
                     controls
                     autoPlay
-                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl object-contain bg-black"
+                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl"
                   />
                 ) : (
                   <MuxPlayer
@@ -214,8 +217,7 @@ const Intro: React.FC = () => {
                     streamType="on-demand"
                     autoPlay
                     metadata={{ video_title: step.title || 'Intro Video' }}
-                    style={{ width: 'auto', height: 'auto', maxHeight: '70vh', maxWidth: '100%' }}
-                    className="rounded-xl shadow-2xl w-auto h-auto object-contain bg-black"
+                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl"
                   />
                 )}
               </div>
@@ -231,7 +233,7 @@ const Intro: React.FC = () => {
               onClick={handleNext}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all"
+              className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all z-20"
             >
               {step.buttonText || 'Continue ➡️'}
             </motion.button>

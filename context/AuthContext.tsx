@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth, googleProvider, db, firebaseConfig } from '../src/firebaseConfig';
 import { signInWithPopup, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, UserCredential, getAuth } from 'firebase/auth';
-import { ref, get, set, child, onValue, update } from 'firebase/database';
+import { ref, get, set, child, onValue, update, push } from 'firebase/database';
 import { UserProfile } from '../types';
 import { INITIAL_ADMIN_EMAILS, DEFAULT_MAX_ATTEMPTS } from '../constants';
 
@@ -27,6 +27,7 @@ interface AuthContextType {
     requestMpinReset: () => Promise<void>;
     clearSecurityAlerts: (mpin: string) => Promise<boolean>;
     hasPermission: (permission: keyof import('../types').UserPermissions) => boolean;
+    updateListeningStatus: (track: import('../types').Track | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -409,6 +410,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
     };
 
+    const updateListeningStatus = async (track: import('../types').Track | null) => {
+        if (!currentUser?.uid) return;
+
+        try {
+            const updates: any = {
+                listeningTo: track,
+                listeningSince: track ? new Date().toISOString() : null
+            };
+
+            // Increment count & LOG HISTORY if starting a new track
+            if (track) {
+                // Check if it's a new track session (different from what's currently stored or just starting)
+                // Note: currentUser.listeningTo might be stale if we just updated it locally but this function is called rapidly.
+                // However, for typical music playback, this overhead is fine.
+                if (currentUser.listeningTo?.id !== track.id) {
+                    const currentCount = currentUser.totalPlayCount || 0;
+                    updates.totalPlayCount = currentCount + 1;
+
+                    // --- ADD LOG ENTRY ---
+                    const historyRef = ref(db, 'music_logs');
+                    await push(historyRef, {
+                        userId: currentUser.uid,
+                        userName: currentUser.displayName || 'Anonymous',
+                        userPhoto: currentUser.photoURL || '',
+                        trackId: track.id,
+                        trackTitle: track.title,
+                        trackArtist: track.artist,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
+
+            await update(ref(db, `users/${currentUser.uid}`), updates);
+
+            // Local update strictly for speed
+            setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+
+        } catch (e) {
+            console.error("Failed to update listening status", e);
+        }
+    };
+
+    // Force loading to complete after 10 seconds to prevent white screen
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (loading) {
+                console.warn("Auth loading timed out, forcing render");
+                setLoading(false);
+            }
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [loading]);
+
+    // Render banned screen if user is banned
     if (isBanned) {
         return (
             <div className="min-h-screen bg-red-900 flex items-center justify-center p-6 text-center">
@@ -428,17 +483,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
     }
 
-    // Force loading to complete after 10 seconds to prevent white screen
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (loading) {
-                console.warn("Auth loading timed out, forcing render");
-                setLoading(false);
-            }
-        }, 10000);
-        return () => clearTimeout(timer);
-    }, [loading]);
-
     // Simple Spinner for Auth Loading
     if (loading) {
         return (
@@ -454,7 +498,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             loginWithGoogle, loginWithEmail, signupWithEmail, logout,
             isAdmin: currentUser?.role === 'admin' && !viewAsUser,
             viewAsUser, toggleViewMode, banCurrentDevice,
-            isAppLocked, lockApp, unlockApp, setupMpin, requestMpinReset, clearSecurityAlerts, hasPermission
+            isAppLocked, lockApp, unlockApp, setupMpin, requestMpinReset, clearSecurityAlerts, hasPermission,
+            updateListeningStatus
         }}>
             {children}
         </AuthContext.Provider>

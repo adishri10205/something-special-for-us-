@@ -8,7 +8,7 @@ import { ref, onValue, update, remove, set } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity, Shield
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity, Shield, History
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
@@ -55,6 +55,7 @@ const Admin: React.FC = () => {
   const [newReel, setNewReel] = useState('');
   const [newTrack, setNewTrack] = useState<Partial<Track>>({ title: '', artist: '' });
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [musicLogs, setMusicLogs] = useState<any[]>([]); // HISTORY LOGS
 
   // Intro Flow Edit State
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
@@ -102,7 +103,7 @@ const Admin: React.FC = () => {
   const [bannedIPs, setBannedIPs] = useState<any[]>([]);
 
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (activeTab === 'users' || activeTab === 'music') {
       const usersRef = ref(db, 'users');
       // Listen for updates
       const unsub = onValue(usersRef, (snapshot) => {
@@ -119,13 +120,29 @@ const Admin: React.FC = () => {
       const unsubBans = onValue(bansRef, (snap) => {
         if (snap.exists()) {
           const data = snap.val();
-          setBannedIPs(Object.keys(data).map(k => ({ id: k, ...data[k] })));
+          const bans = Object.values(data);
+          setBannedIPs(bans);
         } else { setBannedIPs([]); }
       });
 
       return () => { unsub(); unsubBans(); };
     }
   }, [activeTab]);
+
+  // --- FETCH MUSIC LOGS ---
+  useEffect(() => {
+    const logsRef = ref(db, 'music_logs');
+    const unsub = onValue(logsRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.val();
+        const list = Object.values(data).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setMusicLogs(list);
+      } else {
+        setMusicLogs([]);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const toggleUserRole = async (user: UserProfile) => {
     const newRole = user.role === 'admin' ? 'user' : 'admin';
@@ -140,13 +157,32 @@ const Admin: React.FC = () => {
   };
 
   const deleteUserRecord = async (uid: string) => {
-    if (!confirm("Allow this user access to be revoked? This deletes their profile record (but not their Auth account).")) return;
+    if (!confirm('Delete this user permanently?')) return;
     await remove(ref(db, `users/${uid}`));
   };
 
   const removeBan = async (id: string) => {
     if (!confirm("Lift ban for this IP?")) return;
     await remove(ref(db, `banned_ips/${id}`));
+  };
+
+  const unbanIP = async (ip: string) => {
+    if (!confirm(`Remove ban for IP: ${ip}?`)) return;
+    try {
+      const ipKey = ip.replace(/[\.\#\$\/\[\]\:]/g, '_');
+      await remove(ref(db, `banned_ips/${ipKey}`));
+
+      // Also clear local storage if this is the current device
+      if (localStorage.getItem('device_banned')) {
+        localStorage.removeItem('device_banned');
+        localStorage.removeItem('ban_reason');
+      }
+
+      alert(`IP ${ip} has been unbanned successfully!`);
+    } catch (error) {
+      console.error('Failed to unban IP:', error);
+      alert('Failed to unban IP. Please try again.');
+    }
   };
 
   // --- Handlers ---
@@ -974,12 +1010,24 @@ const Admin: React.FC = () => {
           {activeTab === 'intro' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Intro Sequence Flow</h2>
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm my-4">
+                <div>
+                  <h3 className="font-bold text-gray-800">Enable Intro Sequence</h3>
+                  <p className="text-xs text-gray-500">If disabled, users will skip this flow and go directly to security check.</p>
+                </div>
+                <button
+                  onClick={() => setStartupSettings({ ...startupSettings, mode: startupSettings.mode === 'full' ? 'countdown' : 'full' })}
+                  className={`relative w-14 h-7 rounded-full transition-colors ${startupSettings.mode === 'full' ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform ${startupSettings.mode === 'full' ? 'translate-x-7' : ''}`} />
+                </button>
+              </div>
               <p className="text-gray-500 text-sm">Define the steps user sees before the countdown.</p>
 
               {/* Steps List */}
               <div className="space-y-4">
                 {introFlow && introFlow.map((step, index) => (
-                  <div key={step.id} className="bg-white p-4 rounded-xl border flex flex-col md:flex-row gap-4 items-start md:items-center shadow-sm">
+                  <div key={step.id} className={`bg-white p-4 rounded-xl border flex flex-col md:flex-row gap-4 items-start md:items-center shadow-sm ${step.disabled ? 'opacity-60 bg-gray-50' : ''}`}>
                     <div className="flex flex-col items-center justify-center gap-1 mr-2">
                       <button disabled={index === 0} onClick={() => moveIntroStep(index, 'up')} className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"><MoveUp size={16} /></button>
                       <span className="text-xs font-mono font-bold text-gray-400">{index + 1}</span>
@@ -991,12 +1039,20 @@ const Admin: React.FC = () => {
                         <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${step.type === 'quiz' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                           {step.type}
                         </span>
+                        {step.disabled && <span className="text-[10px] font-bold bg-gray-200 text-gray-500 px-2 py-0.5 rounded">DISABLED</span>}
                         {step.title && <span className="font-bold text-gray-800">{step.title.substring(0, 30)}...</span>}
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-2">{step.content}</p>
                     </div>
 
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => updateIntroStep(step.id, { disabled: !step.disabled })}
+                        className={`p-2 rounded ${step.disabled ? 'text-gray-400 hover:bg-gray-100' : 'text-green-600 hover:bg-green-50'}`}
+                        title={step.disabled ? "Enable Step" : "Disable Step"}
+                      >
+                        {step.disabled ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                       <button onClick={() => startEditIntroStep(step)} className="p-2 text-blue-500 hover:bg-blue-50 rounded"><Edit2 size={18} /></button>
                       <button onClick={() => deleteIntroStep(step.id)} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={18} /></button>
                     </div>
@@ -1482,122 +1538,128 @@ const Admin: React.FC = () => {
             </div>
           )}
 
+
+
           {/* HOME TAB */}
-          {activeTab === 'home' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Manage Home Page</h2>
+          {
+            activeTab === 'home' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Manage Home Page</h2>
 
-              {/* Site Title Editor */}
-              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-                <h3 className="font-bold text-gray-700">Site Browser Title</h3>
-                <div className="flex gap-4">
-                  <input
-                    className="flex-1 p-2 border rounded"
-                    placeholder="Happy Birthday My Besti"
-                    defaultValue={siteTitle}
-                    onBlur={(e) => setSiteTitle(e.target.value)}
-                  />
-                  <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
-                    Auto-Saved
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">The title shown in the browser tab and search results.</p>
-              </div>
-
-              {/* Welcome Message Editor */}
-              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-                <h3 className="font-bold text-gray-700">Welcome Title</h3>
-                <div className="flex gap-4">
-                  <input
-                    className="flex-1 p-2 border rounded"
-                    placeholder="Welcome, My Besti"
-                    defaultValue={welcomeMessage}
-                    onBlur={(e) => setWelcomeMessage(e.target.value)}
-                  />
-                  <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
-                    Auto-Saved
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">Click outside the box to save changes.</p>
-              </div>
-
-              {/* Home Caption Editor */}
-              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-                <h3 className="font-bold text-gray-700">Home Caption</h3>
-                <div className="flex gap-4">
-                  <textarea
-                    className="flex-1 p-2 border rounded min-h-[80px]"
-                    placeholder="Every love story is beautiful, but ours is my favorite."
-                    defaultValue={homeCaption}
-                    onBlur={(e) => setHomeCaption(e.target.value)}
-                  />
-                  <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none h-fit">
-                    Auto-Saved
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">The caption that appears below the welcome message on the home page.</p>
-              </div>
-
-              <h2 className="text-xl font-bold mt-8">Card Visibility</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.keys(cardVisibility).map(key => (
-                  <div key={key} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
-                    <span className="font-mono text-gray-600">{key}</span>
-                    <button
-                      onClick={() => toggleCard(key)}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${cardVisibility[key] ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                    >
-                      {cardVisibility[key] ? <Eye size={16} /> : <EyeOff size={16} />}
-                      {cardVisibility[key] ? 'Visible' : 'Hidden'}
+                {/* Site Title Editor */}
+                <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                  <h3 className="font-bold text-gray-700">Site Browser Title</h3>
+                  <div className="flex gap-4">
+                    <input
+                      className="flex-1 p-2 border rounded"
+                      placeholder="Happy Birthday My Besti"
+                      defaultValue={siteTitle}
+                      onBlur={(e) => setSiteTitle(e.target.value)}
+                    />
+                    <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
+                      Auto-Saved
                     </button>
                   </div>
-                ))}
+                  <p className="text-xs text-gray-400">The title shown in the browser tab and search results.</p>
+                </div>
+
+                {/* Welcome Message Editor */}
+                <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                  <h3 className="font-bold text-gray-700">Welcome Title</h3>
+                  <div className="flex gap-4">
+                    <input
+                      className="flex-1 p-2 border rounded"
+                      placeholder="Welcome, My Besti"
+                      defaultValue={welcomeMessage}
+                      onBlur={(e) => setWelcomeMessage(e.target.value)}
+                    />
+                    <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none">
+                      Auto-Saved
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">Click outside the box to save changes.</p>
+                </div>
+
+                {/* Home Caption Editor */}
+                <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                  <h3 className="font-bold text-gray-700">Home Caption</h3>
+                  <div className="flex gap-4">
+                    <textarea
+                      className="flex-1 p-2 border rounded min-h-[80px]"
+                      placeholder="Every love story is beautiful, but ours is my favorite."
+                      defaultValue={homeCaption}
+                      onBlur={(e) => setHomeCaption(e.target.value)}
+                    />
+                    <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded font-bold text-sm pointer-events-none h-fit">
+                      Auto-Saved
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">The caption that appears below the welcome message on the home page.</p>
+                </div>
+
+                <h2 className="text-xl font-bold mt-8">Card Visibility</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.keys(cardVisibility).map(key => (
+                    <div key={key} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                      <span className="font-mono text-gray-600">{key}</span>
+                      <button
+                        onClick={() => toggleCard(key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${cardVisibility[key] ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                      >
+                        {cardVisibility[key] ? <Eye size={16} /> : <EyeOff size={16} />}
+                        {cardVisibility[key] ? 'Visible' : 'Hidden'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* JOURNEY TAB */}
-          {activeTab === 'journey' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Timeline Events</h2>
+          {
+            activeTab === 'journey' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Timeline Events</h2>
 
-              <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-                <h3 className="font-semibold text-gray-700">Add New Event</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input placeholder="Year (e.g. 2025)" className="p-2 border rounded" value={newTimeline.year} onChange={e => setNewTimeline({ ...newTimeline, year: e.target.value })} />
-                  <input placeholder="Title" className="p-2 border rounded" value={newTimeline.title} onChange={e => setNewTimeline({ ...newTimeline, title: e.target.value })} />
-                  <input placeholder="Image URL (Optional)" className="p-2 border rounded" value={newTimeline.image} onChange={e => setNewTimeline({ ...newTimeline, image: e.target.value })} />
-                  <textarea placeholder="Description" className="p-2 border rounded col-span-full" rows={2} value={newTimeline.description} onChange={e => setNewTimeline({ ...newTimeline, description: e.target.value })} />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={addTimelineEvent} className="bg-gray-800 text-white px-4 py-2 rounded flex items-center gap-2 text-sm hover:bg-gray-700">
-                    {editingTimelineId ? <Edit2 size={16} /> : <Plus size={16} />}
-                    {editingTimelineId ? 'Update Event' : 'Add Event'}
-                  </button>
-                  {editingTimelineId && (
-                    <button onClick={cancelEditTimeline} className="bg-white border text-gray-700 px-4 py-2 rounded flex items-center gap-2 text-sm hover:bg-gray-100">
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {timelineData.map(item => (
-                  <div key={item.id} className="bg-white p-4 rounded-xl border flex justify-between items-center">
-                    <div>
-                      <span className="font-bold text-rose-500">{item.year}</span> - <span className="font-semibold">{item.title}</span>
-                      <p className="text-xs text-gray-500 truncate max-w-md">{item.description}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => startEditTimeline(item)} className="text-blue-400 hover:text-blue-600 p-2"><Edit2 size={18} /></button>
-                      <button onClick={() => deleteTimelineEvent(item.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={18} /></button>
-                    </div>
+                <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                  <h3 className="font-semibold text-gray-700">Add New Event</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input placeholder="Year (e.g. 2025)" className="p-2 border rounded" value={newTimeline.year} onChange={e => setNewTimeline({ ...newTimeline, year: e.target.value })} />
+                    <input placeholder="Title" className="p-2 border rounded" value={newTimeline.title} onChange={e => setNewTimeline({ ...newTimeline, title: e.target.value })} />
+                    <input placeholder="Image URL (Optional)" className="p-2 border rounded" value={newTimeline.image} onChange={e => setNewTimeline({ ...newTimeline, image: e.target.value })} />
+                    <textarea placeholder="Description" className="p-2 border rounded col-span-full" rows={2} value={newTimeline.description} onChange={e => setNewTimeline({ ...newTimeline, description: e.target.value })} />
                   </div>
-                ))}
+                  <div className="flex gap-2">
+                    <button onClick={addTimelineEvent} className="bg-gray-800 text-white px-4 py-2 rounded flex items-center gap-2 text-sm hover:bg-gray-700">
+                      {editingTimelineId ? <Edit2 size={16} /> : <Plus size={16} />}
+                      {editingTimelineId ? 'Update Event' : 'Add Event'}
+                    </button>
+                    {editingTimelineId && (
+                      <button onClick={cancelEditTimeline} className="bg-white border text-gray-700 px-4 py-2 rounded flex items-center gap-2 text-sm hover:bg-gray-100">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {timelineData.map(item => (
+                    <div key={item.id} className="bg-white p-4 rounded-xl border flex justify-between items-center">
+                      <div>
+                        <span className="font-bold text-rose-500">{item.year}</span> - <span className="font-semibold">{item.title}</span>
+                        <p className="text-xs text-gray-500 truncate max-w-md">{item.description}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => startEditTimeline(item)} className="text-blue-400 hover:text-blue-600 p-2"><Edit2 size={18} /></button>
+                        <button onClick={() => deleteTimelineEvent(item.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={18} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
 
 
@@ -1801,6 +1863,85 @@ const Admin: React.FC = () => {
             activeTab === 'music' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Playlist</h2>
+
+                {/* Live Activity Monitoring */}
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Music size={100} className="text-emerald-900" />
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2 mb-4">
+                      <Activity className="animate-pulse" size={20} /> Match Live Listening Status
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {userList.filter(u => u.listeningTo).length === 0 ? (
+                        <p className="text-emerald-700 italic opacity-70">No one is listening right now...</p>
+                      ) : (
+                        userList.filter(u => u.listeningTo).map(user => (
+                          <div key={user.uid} className="bg-white/80 backdrop-blur p-4 rounded-lg shadow-sm border border-emerald-100 flex items-center gap-3">
+                            <div className="relative">
+                              <img src={String(user.photoURL || 'https://via.placeholder.com/40')} className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400" alt="" />
+                              <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white animate-bounce" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-gray-900 truncate">{String(user.displayName || 'Anonymous')}</p>
+                              <div className="flex items-center gap-1 text-emerald-700 text-xs font-medium">
+                                <Music size={10} />
+                                <span className="truncate">{user.listeningTo?.title || 'Unknown Track'}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                Total Plays: {Number(user.totalPlayCount || 0)}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Play History */}
+                <div className="bg-white p-6 rounded-xl border shadow-sm">
+                  <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <History size={18} /> Recent Play History
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-gray-500">
+                          <th className="py-2">User</th>
+                          <th className="py-2">Track</th>
+                          <th className="py-2">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {musicLogs.slice(0, 50).map((log, i) => (
+                          <tr key={i} className="hover:bg-gray-50">
+                            <td className="py-2 font-medium flex items-center gap-2">
+                              {log.userPhoto && (
+                                <img src={String(log.userPhoto)} className="w-6 h-6 rounded-full" alt="" />
+                              )}
+                              {String(log.userName || 'Unknown')}
+                            </td>
+                            <td className="py-2 text-gray-700">
+                              {String(log.trackTitle || 'Unknown')} <span className="text-gray-400 text-xs">- {String(log.trackArtist || 'Unknown')}</span>
+                            </td>
+                            <td className="py-2 text-gray-400 text-xs">
+                              {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                        {musicLogs.length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="py-8 text-center text-gray-400">No play history found.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4">
                   <input className="flex-1 p-2 border rounded" placeholder="Song Title" value={newTrack.title} onChange={e => setNewTrack({ ...newTrack, title: e.target.value })} />
                   <input className="flex-1 p-2 border rounded" placeholder="Artist" value={newTrack.artist} onChange={e => setNewTrack({ ...newTrack, artist: e.target.value })} />
@@ -2118,139 +2259,189 @@ const Admin: React.FC = () => {
                     </table>
                   </div>
                 </div>
+
+                {/* Banned IP Addresses Section */}
+                <div className="bg-white rounded-xl border shadow-sm overflow-hidden mt-6">
+                  <div className="bg-red-50 border-b border-red-100 p-4">
+                    <h3 className="font-bold text-red-900 flex items-center gap-2">
+                      <Shield size={20} />
+                      Banned IP Addresses
+                    </h3>
+                    <p className="text-xs text-red-600 mt-1">
+                      Devices banned for security violations
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    {bannedIPs.length === 0 ? (
+                      <p className="text-gray-400 text-center py-8 italic">No banned IPs</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bannedIPs.map((ban: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-lg">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-red-900">{ban.ip || 'Unknown IP'}</span>
+                                <span className="px-2 py-0.5 bg-red-200 text-red-800 text-xs rounded-full font-bold">BANNED</span>
+                              </div>
+                              <p className="text-sm text-red-700 mt-1">
+                                <span className="font-semibold">Reason:</span> {ban.reason || 'No reason provided'}
+                              </p>
+                              {ban.bannedAt && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  Banned on: {new Date(ban.bannedAt).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => unbanIP(ban.ip)}
+                              className="ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <Check size={14} />
+                              Unban
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )
           }
 
-        </main>
+        </main >
       </div >
 
       {/* GLOBAL EDIT MODAL (Outside main scroll area) */}
       {/* GLOBAL EDIT MODAL */}
-      {editingTimelineId && (
-        // ... (Existing Modal Content) ...
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* ... content matching existing ... */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelEditTimeline} />
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-800">Edit Timeline Event</h3>
-              <button onClick={cancelEditTimeline} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
-            </div>
-            {/* ... existing fields ... */}
-            <div className="space-y-4">
-              <div><label className="text-xs font-bold text-gray-500 uppercase">Year</label><input className="w-full p-3 border rounded-lg" value={newTimeline.year} onChange={e => setNewTimeline({ ...newTimeline, year: e.target.value })} placeholder="Year" /></div>
-              <div><label className="text-xs font-bold text-gray-500 uppercase">Title</label><input className="w-full p-3 border rounded-lg" value={newTimeline.title} onChange={e => setNewTimeline({ ...newTimeline, title: e.target.value })} placeholder="Title" /></div>
-              <div><label className="text-xs font-bold text-gray-500 uppercase">Description</label><textarea className="w-full p-3 border rounded-lg" value={newTimeline.description} onChange={e => setNewTimeline({ ...newTimeline, description: e.target.value })} placeholder="Description" rows={3} /></div>
-              <div><label className="text-xs font-bold text-gray-500 uppercase">Image URL</label><input className="w-full p-3 border rounded-lg" value={newTimeline.image} onChange={e => setNewTimeline({ ...newTimeline, image: e.target.value })} placeholder="Image URL" /></div>
-            </div>
-            <div className="flex justify-end gap-3 mt-8">
-              <button onClick={cancelEditTimeline} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Cancel</button>
-              <button onClick={addTimelineEvent} className="px-5 py-2.5 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 shadow-lg" >Save Changes</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {
+        editingTimelineId && (
+          // ... (Existing Modal Content) ...
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* ... content matching existing ... */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelEditTimeline} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800">Edit Timeline Event</h3>
+                <button onClick={cancelEditTimeline} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+              </div>
+              {/* ... existing fields ... */}
+              <div className="space-y-4">
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Year</label><input className="w-full p-3 border rounded-lg" value={newTimeline.year} onChange={e => setNewTimeline({ ...newTimeline, year: e.target.value })} placeholder="Year" /></div>
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Title</label><input className="w-full p-3 border rounded-lg" value={newTimeline.title} onChange={e => setNewTimeline({ ...newTimeline, title: e.target.value })} placeholder="Title" /></div>
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Description</label><textarea className="w-full p-3 border rounded-lg" value={newTimeline.description} onChange={e => setNewTimeline({ ...newTimeline, description: e.target.value })} placeholder="Description" rows={3} /></div>
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Image URL</label><input className="w-full p-3 border rounded-lg" value={newTimeline.image} onChange={e => setNewTimeline({ ...newTimeline, image: e.target.value })} placeholder="Image URL" /></div>
+              </div>
+              <div className="flex justify-end gap-3 mt-8">
+                <button onClick={cancelEditTimeline} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Cancel</button>
+                <button onClick={addTimelineEvent} className="px-5 py-2.5 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 shadow-lg" >Save Changes</button>
+              </div>
+            </motion.div>
+          </div>
+        )
+      }
 
       {/* PERMISSION MODAL */}
-      {permissionUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPermissionUser(null)} />
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative z-10 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+      {
+        permissionUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPermissionUser(null)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative z-10 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Manage Permissions</h3>
+                  <p className="text-sm text-gray-500">For {permissionUser.displayName || permissionUser.email}</p>
+                </div>
+                <button onClick={() => setPermissionUser(null)} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+              </div>
+
+              {/* Visibility Permissions Section */}
+              <div className="mb-6">
+                <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
+                  <Eye size={16} />
+                  View Access (Visibility)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries({
+                    canViewTimeline: 'View Journey',
+                    canViewGallery: 'View Gallery',
+                    canViewReels: 'View Reels',
+                    canViewMusic: 'View Music',
+                    canViewNotes: 'View Notes',
+                    canViewMessages: 'View Messages',
+                    canViewVault: 'View Vault',
+                    canViewFlipbook: 'View Flipbook',
+                    canViewLinks: 'View Links',
+                    canViewVideos: 'View Videos',
+                    canViewVoiceNotes: 'View Voice Notes'
+                  }).map(([key, label]) => {
+                    const permKey = key as keyof import('../types').UserPermissions;
+                    const isEnabled = permissionUser.customPermissions?.[permKey] || false;
+                    return (
+                      <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-200'}`}
+                        onClick={() => {
+                          const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
+                          setPermissionUser({ ...permissionUser, customPermissions: newPerms });
+                        }}
+                      >
+                        <span className={`text-sm font-bold ${isEnabled ? 'text-green-700' : 'text-gray-600'}`}>{label}</span>
+                        {isEnabled ? <Check size={18} className="text-green-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Edit & Access Permissions Section */}
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Manage Permissions</h3>
-                <p className="text-sm text-gray-500">For {permissionUser.displayName || permissionUser.email}</p>
+                <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
+                  <Settings size={16} />
+                  Edit & Access Permissions
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries({
+                    canEditTimeline: 'Edit Timeline',
+                    canEditGallery: 'Edit Gallery',
+                    canEditReels: 'Edit Reels',
+                    canEditMusic: 'Music Control',
+                    canEditNotes: 'Moderate Notes',
+                    canViewAdmin: 'Access Admin',
+                    canEditCards: 'Edit Home Cards'
+                  }).map(([key, label]) => {
+                    const permKey = key as keyof import('../types').UserPermissions;
+                    const isEnabled = permissionUser.customPermissions?.[permKey] || false;
+                    return (
+                      <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}
+                        onClick={() => {
+                          const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
+                          setPermissionUser({ ...permissionUser, customPermissions: newPerms });
+                        }}
+                      >
+                        <span className={`text-sm font-bold ${isEnabled ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
+                        {isEnabled ? <Check size={18} className="text-blue-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <button onClick={() => setPermissionUser(null)} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
-            </div>
 
-            {/* Visibility Permissions Section */}
-            <div className="mb-6">
-              <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                <Eye size={16} />
-                View Access (Visibility)
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries({
-                  canViewTimeline: 'View Journey',
-                  canViewGallery: 'View Gallery',
-                  canViewReels: 'View Reels',
-                  canViewMusic: 'View Music',
-                  canViewNotes: 'View Notes',
-                  canViewMessages: 'View Messages',
-                  canViewVault: 'View Vault',
-                  canViewFlipbook: 'View Flipbook',
-                  canViewLinks: 'View Links',
-                  canViewVideos: 'View Videos',
-                  canViewVoiceNotes: 'View Voice Notes'
-                }).map(([key, label]) => {
-                  const permKey = key as keyof import('../types').UserPermissions;
-                  const isEnabled = permissionUser.customPermissions?.[permKey] || false;
-                  return (
-                    <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-200'}`}
-                      onClick={() => {
-                        const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
-                        setPermissionUser({ ...permissionUser, customPermissions: newPerms });
-                      }}
-                    >
-                      <span className={`text-sm font-bold ${isEnabled ? 'text-green-700' : 'text-gray-600'}`}>{label}</span>
-                      {isEnabled ? <Check size={18} className="text-green-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
-                    </div>
-                  );
-                })}
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
+                <button onClick={() => setPermissionUser(null)} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Cancel</button>
+                <button
+                  onClick={async () => {
+                    if (!permissionUser.uid) return;
+                    await update(ref(db, `users/${permissionUser.uid}`), { customPermissions: permissionUser.customPermissions });
+                    setPermissionUser(null);
+                  }}
+                  className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg"
+                >
+                  Save Permissions
+                </button>
               </div>
-            </div>
-
-            {/* Edit & Access Permissions Section */}
-            <div>
-              <h4 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                <Settings size={16} />
-                Edit & Access Permissions
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries({
-                  canEditTimeline: 'Edit Timeline',
-                  canEditGallery: 'Edit Gallery',
-                  canEditReels: 'Edit Reels',
-                  canEditMusic: 'Music Control',
-                  canEditNotes: 'Moderate Notes',
-                  canViewAdmin: 'Access Admin',
-                  canEditCards: 'Edit Home Cards'
-                }).map(([key, label]) => {
-                  const permKey = key as keyof import('../types').UserPermissions;
-                  const isEnabled = permissionUser.customPermissions?.[permKey] || false;
-                  return (
-                    <div key={key} className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex justify-between items-center ${isEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}
-                      onClick={() => {
-                        const newPerms = { ...permissionUser.customPermissions, [permKey]: !isEnabled };
-                        setPermissionUser({ ...permissionUser, customPermissions: newPerms });
-                      }}
-                    >
-                      <span className={`text-sm font-bold ${isEnabled ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
-                      {isEnabled ? <Check size={18} className="text-blue-600" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
-              <button onClick={() => setPermissionUser(null)} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Cancel</button>
-              <button
-                onClick={async () => {
-                  if (!permissionUser.uid) return;
-                  await update(ref(db, `users/${permissionUser.uid}`), { customPermissions: permissionUser.customPermissions });
-                  setPermissionUser(null);
-                }}
-                className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg"
-              >
-                Save Permissions
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+            </motion.div>
+          </div>
+        )
+      }
 
     </div >
   );
@@ -2299,6 +2490,8 @@ const HomeLayoutEditor: React.FC = () => {
       }
     }, { onlyOnce: true });
   }, []);
+
+
 
   const handleReorder = (newOrder: typeof items) => {
     setItems(newOrder);

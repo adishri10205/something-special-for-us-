@@ -1,12 +1,21 @@
 
-const MUX_API_BASE = 'https://api.mux.com/video/v1';
+// Update to use local proxy to avoid CORS
+const MUX_API_BASE = '/api/mux';
 
 // WARNING: In a real production app, these keys should NOT be exposed on the client.
 // Requests should be proxied through a backend server.
 const MUX_TOKEN_ID = import.meta.env.VITE_MUX_TOKEN_ID;
 const MUX_SECRET_KEY = import.meta.env.VITE_MUX_SECRET_KEY;
 
+// validate keys
+if (!MUX_TOKEN_ID || !MUX_SECRET_KEY) {
+    console.error("Mux Keys Missing in environment!");
+}
+
 const getAuthHeader = () => {
+    if (!MUX_TOKEN_ID || !MUX_SECRET_KEY) {
+        throw new Error("Missing Mux API Keys in environment variables");
+    }
     return `Basic ${btoa(`${MUX_TOKEN_ID}:${MUX_SECRET_KEY}`)}`;
 };
 
@@ -22,7 +31,7 @@ export interface MuxAsset {
     status: 'waiting' | 'uploading' | 'processing' | 'ready' | 'error';
 }
 
-export const createMuxUpload = async (): Promise<{ uploadId: string; uploadUrl: string }> => {
+export const createMuxUpload = async (title?: string): Promise<{ uploadId: string; uploadUrl: string }> => {
     const response = await fetch(`${MUX_API_BASE}/uploads`, {
         method: 'POST',
         headers: {
@@ -32,14 +41,22 @@ export const createMuxUpload = async (): Promise<{ uploadId: string; uploadUrl: 
         body: JSON.stringify({
             new_asset_settings: {
                 playback_policy: ['public'],
+                passthrough: title || 'Voice Note',
+                // mp4_support: 'standard' 
             },
-            cors_origin: window.location.origin, // Important for direct uploads from browser
+            cors_origin: window.location.origin,
         }),
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create upload URL');
+        const errorText = await response.text();
+        console.error("Mux create upload failed:", response.status, errorText);
+        let message = 'Failed to create upload URL';
+        try {
+            const errorJson = JSON.parse(errorText);
+            message = errorJson.error?.message || errorJson.message || message;
+        } catch (e) { }
+        throw new Error(message);
     }
 
     const data = await response.json();

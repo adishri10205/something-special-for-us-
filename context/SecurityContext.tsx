@@ -68,7 +68,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 timestamp: new Date().toISOString(),
                 ip: clientIP || 'unknown',
                 userId: currentUser?.uid || 'anonymous',
-                userEmail: currentUser?.email || null,
+                userEmail: currentUser?.email || 'unknown',
                 details,
                 metadata: metadata || {}
             };
