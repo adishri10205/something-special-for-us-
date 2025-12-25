@@ -8,7 +8,7 @@ import { ref, onValue, update, remove, set } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity, Shield
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
@@ -16,6 +16,7 @@ import ChatFlowBuilder from '../components/ChatFlowBuilder';
 import MuxUploader from '../components/MuxUploader';
 import PermissionModal from '../components/PermissionModal';
 import EmotionAdminTab from '../components/EmotionAdminTab';
+import SecurityAdminTab from '../components/SecurityAdminTab';
 
 type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat' | 'security';
 
@@ -509,6 +510,7 @@ const Admin: React.FC = () => {
 
             {isAdmin && (
               <>
+                <TabButton id="security" icon={Shield} label="Security" />
                 <TabButton id="users" icon={Users} label="User Management" />
                 <TabButton id="emotion" icon={Activity} label="Emotion Settings" />
                 <TabButton id="layout" icon={Layout} label="Home Layout" />
@@ -559,35 +561,7 @@ const Admin: React.FC = () => {
 
           {/* SECURITY TAB */}
           {activeTab === 'security' && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-                  <div className="bg-rose-100 p-2 rounded-lg text-rose-600"><Lock size={24} /></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Security Settings</h2>
-                    <p className="text-sm text-gray-500">Manage access control and protection.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Max Login Attempts (MPIN)</label>
-                    <p className="text-xs text-gray-500 mb-2">Number of failed pin entries before the device is automatically banned.</p>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="number"
-                        min={3}
-                        max={50}
-                        className="w-24 p-2 border rounded-lg font-bold text-center"
-                        value={maxMpinAttempts}
-                        onChange={(e) => setMaxMpinAttempts(Number(e.target.value))}
-                      />
-                      <span className="text-sm text-gray-400">Default: 5</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SecurityAdminTab />
           )}
 
           {/* CHAT FLOW TAB */}
