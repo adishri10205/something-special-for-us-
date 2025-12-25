@@ -974,12 +974,24 @@ const Admin: React.FC = () => {
           {activeTab === 'intro' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Intro Sequence Flow</h2>
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm my-4">
+                <div>
+                  <h3 className="font-bold text-gray-800">Enable Intro Sequence</h3>
+                  <p className="text-xs text-gray-500">If disabled, users will skip this flow and go directly to security check.</p>
+                </div>
+                <button
+                  onClick={() => setStartupSettings({ ...startupSettings, mode: startupSettings.mode === 'full' ? 'countdown' : 'full' })}
+                  className={`relative w-14 h-7 rounded-full transition-colors ${startupSettings.mode === 'full' ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform ${startupSettings.mode === 'full' ? 'translate-x-7' : ''}`} />
+                </button>
+              </div>
               <p className="text-gray-500 text-sm">Define the steps user sees before the countdown.</p>
 
               {/* Steps List */}
               <div className="space-y-4">
                 {introFlow && introFlow.map((step, index) => (
-                  <div key={step.id} className="bg-white p-4 rounded-xl border flex flex-col md:flex-row gap-4 items-start md:items-center shadow-sm">
+                  <div key={step.id} className={`bg-white p-4 rounded-xl border flex flex-col md:flex-row gap-4 items-start md:items-center shadow-sm ${step.disabled ? 'opacity-60 bg-gray-50' : ''}`}>
                     <div className="flex flex-col items-center justify-center gap-1 mr-2">
                       <button disabled={index === 0} onClick={() => moveIntroStep(index, 'up')} className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"><MoveUp size={16} /></button>
                       <span className="text-xs font-mono font-bold text-gray-400">{index + 1}</span>
@@ -991,12 +1003,20 @@ const Admin: React.FC = () => {
                         <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${step.type === 'quiz' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                           {step.type}
                         </span>
+                        {step.disabled && <span className="text-[10px] font-bold bg-gray-200 text-gray-500 px-2 py-0.5 rounded">DISABLED</span>}
                         {step.title && <span className="font-bold text-gray-800">{step.title.substring(0, 30)}...</span>}
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-2">{step.content}</p>
                     </div>
 
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => updateIntroStep(step.id, { disabled: !step.disabled })}
+                        className={`p-2 rounded ${step.disabled ? 'text-gray-400 hover:bg-gray-100' : 'text-green-600 hover:bg-green-50'}`}
+                        title={step.disabled ? "Enable Step" : "Disable Step"}
+                      >
+                        {step.disabled ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                       <button onClick={() => startEditIntroStep(step)} className="p-2 text-blue-500 hover:bg-blue-50 rounded"><Edit2 size={18} /></button>
                       <button onClick={() => deleteIntroStep(step.id)} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={18} /></button>
                     </div>

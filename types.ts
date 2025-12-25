@@ -154,6 +154,7 @@ export interface IntroStep {
   options?: string[]; // For quiz
   correctAnswer?: string; // For quiz
   buttonText?: string;
+  disabled?: boolean;
 }
 
 export type ChatStepType = 'text' | 'image' | 'gif' | 'link' | 'options' | 'end' | 'login';

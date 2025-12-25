@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext';
 import { AppState, IntroStep } from '../types';
 import FloatingHearts from '../components/FloatingHearts';
 import ChatIntro from '../components/ChatIntro';
+import MuxPlayer from '@mux/mux-player-react';
 
 const Intro: React.FC = () => {
   const { setAppState, togglePlay } = useApp();
@@ -18,8 +19,11 @@ const Intro: React.FC = () => {
   const [securityState, setSecurityState] = useState<'idle' | 'checking' | 'verified' | 'failed'>('idle');
   const [isSkipping, setIsSkipping] = useState(true);
 
+  // Filter out disabled steps
+  const activeFlow = introFlow ? introFlow.filter(step => !step.disabled) : [];
+
   // If no flow defined, create a minimal default to prevent errors
-  const safeFlow: IntroStep[] = introFlow && introFlow.length > 0 ? introFlow : [
+  const safeFlow: IntroStep[] = activeFlow.length > 0 ? activeFlow : [
     { id: 'default', type: 'greeting', title: 'Happy Birthday', content: 'Welcome!', buttonText: 'Start' }
   ];
 
@@ -199,24 +203,22 @@ const Intro: React.FC = () => {
             )}
 
             {step.mediaUrl && (
-              <div className="w-full max-w-xl mb-6 rounded-xl overflow-hidden shadow-2xl">
+              <div className="w-full flex justify-center mb-6">
                 {step.mediaUrl.includes('http') ? (
                   <video
                     src={step.mediaUrl}
                     controls
                     autoPlay
-                    className="w-full"
+                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl"
                   />
                 ) : (
-                  // Assume it's a Mux Playback ID
-                  <div className="aspect-video bg-black">
-                    <iframe
-                      src={`https://stream.mux.com/${step.mediaUrl}.html?autoplay=true`}
-                      className="w-full h-full"
-                      allow="autoplay; fullscreen"
-                      allowFullScreen
-                    />
-                  </div>
+                  <MuxPlayer
+                    playbackId={step.mediaUrl}
+                    streamType="on-demand"
+                    autoPlay
+                    metadata={{ video_title: step.title || 'Intro Video' }}
+                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl"
+                  />
                 )}
               </div>
             )}
@@ -231,7 +233,7 @@ const Intro: React.FC = () => {
               onClick={handleNext}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all"
+              className="bg-rose-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-rose-600 transition-all z-20"
             >
               {step.buttonText || 'Continue ➡️'}
             </motion.button>
