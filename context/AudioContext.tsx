@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
 import { Track } from '../types';
 import Hls from 'hls.js';
+import { useAuth } from './AuthContext';
 
 interface AudioContextType {
     currentTrack: Track | null;
@@ -16,6 +17,7 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { updateListeningStatus } = useAuth();
     const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -169,6 +171,7 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
 
         setCurrentTrack(track);
+        updateListeningStatus(track); // Notify backend
     };
 
     const togglePlay = () => {
@@ -198,6 +201,7 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setIsPlaying(false);
         setProgress(0);
         setCurrentTrack(null);
+        updateListeningStatus(null); // Notify backend stopped
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = 'none';
         }

@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        '/api/mux': {
+          target: 'https://api.mux.com/video/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/mux/, '')
+        }
+      }
     },
     plugins: [react()],
     define: {

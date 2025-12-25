@@ -85,6 +85,9 @@ export interface UserProfile {
   lastSeen?: string;
   customPermissions?: UserPermissions;
   mood?: string;
+  listeningTo?: Track | null;
+  listeningSince?: string;
+  totalPlayCount?: number;
 }
 
 export interface UserPermissions {
