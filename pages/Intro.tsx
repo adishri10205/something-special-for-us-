@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext';
 import { AppState, IntroStep } from '../types';
 import FloatingHearts from '../components/FloatingHearts';
 import ChatIntro from '../components/ChatIntro';
+import MuxPlayer from '@mux/mux-player-react';
 
 const Intro: React.FC = () => {
   const { setAppState, togglePlay } = useApp();
@@ -199,24 +200,23 @@ const Intro: React.FC = () => {
             )}
 
             {step.mediaUrl && (
-              <div className="w-full max-w-xl mb-6 rounded-xl overflow-hidden shadow-2xl">
+              <div className="w-full flex justify-center mb-6">
                 {step.mediaUrl.includes('http') ? (
                   <video
                     src={step.mediaUrl}
                     controls
                     autoPlay
-                    className="w-full"
+                    className="max-w-full max-h-[70vh] w-auto h-auto rounded-xl shadow-2xl object-contain bg-black"
                   />
                 ) : (
-                  // Assume it's a Mux Playback ID
-                  <div className="aspect-video bg-black">
-                    <iframe
-                      src={`https://stream.mux.com/${step.mediaUrl}.html?autoplay=true`}
-                      className="w-full h-full"
-                      allow="autoplay; fullscreen"
-                      allowFullScreen
-                    />
-                  </div>
+                  <MuxPlayer
+                    playbackId={step.mediaUrl}
+                    streamType="on-demand"
+                    autoPlay
+                    metadata={{ video_title: step.title || 'Intro Video' }}
+                    style={{ width: 'auto', height: 'auto', maxHeight: '70vh', maxWidth: '100%' }}
+                    className="rounded-xl shadow-2xl w-auto h-auto object-contain bg-black"
+                  />
                 )}
               </div>
             )}
