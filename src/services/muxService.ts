@@ -22,7 +22,7 @@ export interface MuxAsset {
     status: 'waiting' | 'uploading' | 'processing' | 'ready' | 'error';
 }
 
-export const createMuxUpload = async (): Promise<{ uploadId: string; uploadUrl: string }> => {
+export const createMuxUpload = async (title?: string): Promise<{ uploadId: string; uploadUrl: string }> => {
     const response = await fetch(`${MUX_API_BASE}/uploads`, {
         method: 'POST',
         headers: {
@@ -32,6 +32,8 @@ export const createMuxUpload = async (): Promise<{ uploadId: string; uploadUrl: 
         body: JSON.stringify({
             new_asset_settings: {
                 playback_policy: ['public'],
+                passthrough: title,
+                mp4_support: 'standard' // Optional: create mp4 for better compatibility if needed, but not strictly required
             },
             cors_origin: window.location.origin, // Important for direct uploads from browser
         }),
