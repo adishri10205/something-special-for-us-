@@ -8,7 +8,7 @@ import { ref, onValue, update, remove, set } from 'firebase/database';
 import {
   Settings, Heart, Image as ImageIcon, Music,
   Film, MessageCircle, Lock, Eye, EyeOff, Plus, Trash2, PlayCircle, LogOut, Database, LogIn,
-  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity
+  MoveUp, MoveDown, Edit2, Check, X, ToggleRight, ToggleLeft, Folder, FolderPlus, FolderOpen, Users, Sparkles, Layout, Square, Activity, Shield
 } from 'lucide-react';
 import { TimelineEvent, Track, IntroStep, IntroStepType, ChatStep, ChatStepType, UserProfile } from '../types';
 import { getOptimizedImageUrl } from '../utils';
@@ -16,8 +16,9 @@ import ChatFlowBuilder from '../components/ChatFlowBuilder';
 import MuxUploader from '../components/MuxUploader';
 import PermissionModal from '../components/PermissionModal';
 import EmotionAdminTab from '../components/EmotionAdminTab';
+import SecurityAdminTab from '../components/SecurityAdminTab';
 
-type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat';
+type Tab = 'home' | 'intro' | 'journey' | 'gallery' | 'reels' | 'music' | 'message' | 'notes' | 'vault' | 'settings' | 'users' | 'layout' | 'emotion' | 'chat' | 'security';
 
 
 const Admin: React.FC = () => {
@@ -509,6 +510,7 @@ const Admin: React.FC = () => {
 
             {isAdmin && (
               <>
+                <TabButton id="security" icon={Shield} label="Security" />
                 <TabButton id="users" icon={Users} label="User Management" />
                 <TabButton id="emotion" icon={Activity} label="Emotion Settings" />
                 <TabButton id="layout" icon={Layout} label="Home Layout" />
@@ -554,6 +556,11 @@ const Admin: React.FC = () => {
           {/* EMOTION SETTINGS TAB */}
           {activeTab === 'emotion' && (
             <EmotionAdminTab />
+          )}
+
+          {/* SECURITY TAB */}
+          {activeTab === 'security' && (
+            <SecurityAdminTab />
           )}
 
           {/* CHAT FLOW TAB */}

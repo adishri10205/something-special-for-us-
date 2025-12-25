@@ -250,6 +250,10 @@ export interface UserActivity {
   customStatus?: string;
   displayName?: string;
   photoURL?: string;
+  ip?: string;
+  isOnline?: boolean;
+  lastPageEnter?: number; // Epoch timestamp
+  pageStats?: PageStats;
 }
 
 // Emotion Progress System
@@ -275,4 +279,29 @@ export interface EmotionAction {
   value: number; // Impact on the meter
   description?: string;
   timestamp: string;
+}
+
+export type SecurityEventType = 'login_success' | 'login_fail' | 'page_view' | 'unauthorized_access' | 'admin_action' | 'ip_ban' | 'ip_whitelist';
+
+export interface SecurityLog {
+  id: string;
+  type: SecurityEventType;
+  timestamp: string;
+  ip: string;
+  userId?: string;
+  userEmail?: string;
+  details?: string;
+  path?: string;
+  metadata?: any;
+}
+
+export interface WhitelistedIP {
+  ip: string;
+  label: string;
+  addedBy: string;
+  addedAt: string;
+}
+
+export interface PageStats {
+  [path: string]: number; // Total time in ms
 }

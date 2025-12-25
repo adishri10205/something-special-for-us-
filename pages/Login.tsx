@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader, Sparkles } from 'lucide-react';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -49,60 +49,69 @@ const Login: React.FC = () => {
     const displayError = error || authError;
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-rose-50 to-orange-50 p-4 text-gray-800 font-sans">
+        <div className="min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden bg-[#f3f4f6]">
+            {/* Dynamic Aurora Background - Lighter for Light Theme */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-300 rounded-full blur-[120px] opacity-40 animate-pulse mix-blend-multiply" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-300 rounded-full blur-[120px] opacity-40 animate-pulse delay-700 mix-blend-multiply" />
+                <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] bg-rose-300 rounded-full blur-[120px] opacity-40 animate-bounce duration-[10000ms] mix-blend-multiply" />
+            </div>
+
             <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="w-full max-w-sm"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="w-full max-w-md z-10 p-4"
             >
-                <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-                    <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 mb-4">
-                            <Lock size={20} strokeWidth={2.5} />
+                {/* Glass Card - Light Theme */}
+                <div className="backdrop-blur-xl bg-white/60 border border-white/50 p-8 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] relative overflow-hidden">
+                    {/* Glossy Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
+
+                    <div className="text-center mb-8 relative z-10">
+                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 to-indigo-500 text-white mb-4 shadow-lg shadow-rose-500/30">
+                            <Sparkles size={24} strokeWidth={2.5} />
                         </div>
-                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">Sign In</h2>
-                        <p className="text-sm text-gray-500 mt-2">Enter your credentials to continue</p>
+                        <h2 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Welcome Back</h2>
+                        <p className="text-gray-500 text-sm">Sign in to access your dashboard</p>
                     </div>
 
                     {displayError && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl flex items-start gap-3"
+                            className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-start gap-3"
                         >
-                            <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-600 flex-shrink-0" />
+                            <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
                             <p className="font-medium">{displayError}</p>
                         </motion.div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-gray-500 ml-1 uppercase tracking-wide">Email</label>
+                    <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+                        <div className="space-y-2">
                             <div className="relative group">
-                                <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-rose-500 transition-colors" size={18} />
+                                <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all outline-none font-medium"
-                                    placeholder="name@example.com"
+                                    className="w-full pl-12 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium"
+                                    placeholder="Email Address"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-gray-500 ml-1 uppercase tracking-wide">Password</label>
+                        <div className="space-y-2">
                             <div className="relative group">
-                                <Lock className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-rose-500 transition-colors" size={18} />
+                                <Lock className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all outline-none font-medium"
-                                    placeholder="••••••••"
+                                    className="w-full pl-12 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium"
+                                    placeholder="Password"
                                 />
                             </div>
                         </div>
@@ -110,23 +119,23 @@ const Login: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-black hover:bg-gray-800 text-white py-3.5 rounded-xl font-bold transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-gray-200"
+                            className="w-full bg-gray-900 text-white hover:bg-black py-3.5 rounded-xl font-bold transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-gray-900/20"
                         >
-                            {loading ? <Loader className="animate-spin" size={20} /> : 'Continue'}
+                            {loading ? <Loader className="animate-spin" size={20} /> : 'Sign In'}
                             {!loading && <ArrowRight size={18} />}
                         </button>
                     </form>
 
-                    <div className="my-8 flex items-center gap-3">
-                        <div className="h-px bg-gray-100 flex-1" />
+                    <div className="my-8 flex items-center gap-3 relative z-10">
+                        <div className="h-px bg-gray-200 flex-1" />
                         <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Or continue with</span>
-                        <div className="h-px bg-gray-100 flex-1" />
+                        <div className="h-px bg-gray-200 flex-1" />
                     </div>
 
                     <button
                         onClick={handleGoogleLogin}
                         type="button"
-                        className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 active:scale-[0.98] relative z-10"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

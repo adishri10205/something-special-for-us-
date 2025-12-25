@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { HeaderProvider, useHeader } from './context/HeaderContext';
 import { AudioProvider } from './context/AudioContext';
 import { EmotionProvider } from './context/EmotionContext';
+import { SecurityProvider } from './context/SecurityContext';
+import SecurityMonitor from './components/SecurityMonitor';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -49,6 +51,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Suspense fallback={<LoadingSpinner />}>
+      <SecurityMonitor />
       <Routes>
         <Route path="/" element={<Intro />} />
         {/* Redirect to home if already logged in */}
@@ -87,17 +90,19 @@ const App: React.FC = () => {
       <AuthProvider>
         <EmotionProvider>
           <DataProvider>
-            <HeaderProvider>
-              <AudioProvider>
-                <HashRouter>
-                  <AppRoutes />
-                </HashRouter>
-              </AudioProvider>
-            </HeaderProvider>
+            <SecurityProvider>
+              <HeaderProvider>
+                <AudioProvider>
+                  <HashRouter>
+                    <AppRoutes />
+                  </HashRouter>
+                </AudioProvider>
+              </HeaderProvider>
+            </SecurityProvider>
           </DataProvider>
         </EmotionProvider>
       </AuthProvider>
-    </AppProvider>
+    </AppProvider >
   );
 };
 
