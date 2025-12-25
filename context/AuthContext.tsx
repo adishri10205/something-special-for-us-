@@ -409,6 +409,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
     };
 
+    // Force loading to complete after 10 seconds to prevent white screen
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (loading) {
+                console.warn("Auth loading timed out, forcing render");
+                setLoading(false);
+            }
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [loading]);
+
+    // Render banned screen if user is banned
     if (isBanned) {
         return (
             <div className="min-h-screen bg-red-900 flex items-center justify-center p-6 text-center">
@@ -421,23 +433,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
                     <p className="text-gray-600 mb-6">This device has been banned for security violations.</p>
                     <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-red-800 text-sm font-medium">
-                        Reason: {banReason}
+                        Reason: {String(banReason || 'Security Violation')}
                     </div>
                 </div>
             </div>
         );
     }
-
-    // Force loading to complete after 10 seconds to prevent white screen
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (loading) {
-                console.warn("Auth loading timed out, forcing render");
-                setLoading(false);
-            }
-        }, 10000);
-        return () => clearTimeout(timer);
-    }, [loading]);
 
     // Simple Spinner for Auth Loading
     if (loading) {
