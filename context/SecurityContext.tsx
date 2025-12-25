@@ -68,9 +68,9 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 timestamp: new Date().toISOString(),
                 ip: clientIP || 'unknown',
                 userId: currentUser?.uid || 'anonymous',
-                userEmail: currentUser?.email || undefined,
+                userEmail: currentUser?.email || null,
                 details,
-                metadata
+                metadata: metadata || {}
             };
 
             await set(newLogRef, logEntry);
