@@ -44,7 +44,7 @@ const Admin: React.FC = () => {
     homeCaption, setHomeCaption,
     appVersion, setAppVersion,
     maintenanceMode, setMaintenanceMode,
-
+    maxMpinAttempts, setMaxMpinAttempts
   } = useData();
 
   const { isAdmin, loginWithGoogle, logout, currentUser, signupWithEmail, hasPermission } = useAuth();
@@ -517,6 +517,7 @@ const Admin: React.FC = () => {
                 <TabButton id="settings" icon={PlayCircle} label="Startup Settings" />
                 <TabButton id="intro" icon={Sparkles} label="Intro Flow" />
                 <TabButton id="chat" icon={MessageCircle} label="Chat Flow" />
+                <TabButton id="security" icon={Lock} label="Security" />
               </>
             )}
 

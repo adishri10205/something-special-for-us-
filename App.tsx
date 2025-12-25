@@ -32,6 +32,7 @@ const ComplainBox = lazy(() => import('./pages/ComplainBox'));
 const OurWishes = lazy(() => import('./pages/OurWishes'));
 const EmotionProfile = lazy(() => import('./pages/EmotionProfile'));
 const AccessDenied = lazy(() => import('./pages/AccessDenied'));
+const QuestionWall = lazy(() => import('./pages/QuestionWall'));
 
 const LoadingSpinner = () => (
   <div className="flex h-screen w-full items-center justify-center bg-rose-50">
@@ -70,6 +71,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/secret-message" element={<ProtectedRoute><SecretMessage /></ProtectedRoute>} />
           <Route path="/complain" element={<ProtectedRoute><ComplainBox /></ProtectedRoute>} />
           <Route path="/wishes" element={<ProtectedRoute><OurWishes /></ProtectedRoute>} />
+          <Route path="/question-wall" element={<ProtectedRoute><QuestionWall /></ProtectedRoute>} />
           <Route path="/emotion-profile" element={<ProtectedRoute><EmotionProfile /></ProtectedRoute>} />
           <Route path="/access-denied" element={<ProtectedRoute><AccessDenied /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />

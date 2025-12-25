@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Note } from '../types';
-import { Search, FileText, Plus, X, ChevronLeft, Save, Eye, PenTool, Trash2, Edit } from 'lucide-react';
+import { Search, FileText, Plus, X, ChevronLeft, Save, Eye, PenTool, Trash2, Edit, Lock, LockOpen } from 'lucide-react';
 
 const Notes: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +18,13 @@ const Notes: React.FC = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [editPin, setEditPin] = useState('');
   const [previewMode, setPreviewMode] = useState(true);
+
+  // PIN Protection
+  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set());
+  const [pinPromptId, setPinPromptId] = useState<string | null>(null);
+  const [pinInput, setPinInput] = useState('');
 
   // Hide Bottom Navigation when Editor is Open
   React.useEffect(() => {
@@ -168,9 +174,11 @@ const Notes: React.FC = () => {
                   <h3 className="font-semibold text-gray-800 truncate mb-1">
                     {note.title || note.text.slice(0, 30) || 'Untitled'}
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    {note.date}
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="font-medium text-gray-600">{note.author}</span>
+                    <span>•</span>
+                    <span>{note.date}</span>
+                  </div>
                 </div>
                 {canDelete && (
                   <button
