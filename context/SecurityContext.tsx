@@ -70,7 +70,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 userId: currentUser?.uid || 'anonymous',
                 userEmail: currentUser?.email || 'unknown',
                 details,
-                metadata
+                metadata: metadata || {}
             };
 
             await set(newLogRef, logEntry);
