@@ -43,12 +43,22 @@ const LoadingSpinner = () => (
 const AppRoutes: React.FC = () => {
   const { currentUser } = useAuth();
   const { title } = useHeader();
+  const { siteTitle } = useData();
 
   React.useEffect(() => {
-    if (title) {
-      document.title = title;
+    if (siteTitle) {
+      // Prioritize siteTitle for Home or Default states
+      if (!title || title === 'EaseBook' || title === 'Home') {
+        document.title = siteTitle;
+      } else {
+        // For other pages, show "Page Name • Site Title"
+        document.title = `${title} • ${siteTitle}`;
+      }
+    } else {
+      // Fallback if no siteTitle set
+      document.title = title || 'EaseBook';
     }
-  }, [title]);
+  }, [title, siteTitle]);
 
   return (
     <Suspense fallback={<LoadingSpinner />}>
