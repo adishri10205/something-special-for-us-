@@ -1,7 +1,7 @@
 {
-    "name": "Forever & Always",
-    "short_name": "Forever",
-    "description": "Our special memory book.",
+    "name": "MyBesti",
+    "short_name": "MyBesti",
+    "description": "Your special connection and memory book.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#fff1f2",

@@ -48,7 +48,7 @@ const AppRoutes: React.FC = () => {
   React.useEffect(() => {
     if (siteTitle) {
       // Prioritize siteTitle for Home or Default states
-      if (!title || title === 'EaseBook' || title === 'Home') {
+      if (!title || title === 'MyBesti' || title === 'Home') {
         document.title = siteTitle;
       } else {
         // For other pages, show "Page Name • Site Title"
@@ -56,7 +56,7 @@ const AppRoutes: React.FC = () => {
       }
     } else {
       // Fallback if no siteTitle set
-      document.title = title || 'EaseBook';
+      document.title = title || 'MyBesti';
     }
   }, [title, siteTitle]);
 
