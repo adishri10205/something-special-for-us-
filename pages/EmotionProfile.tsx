@@ -102,14 +102,14 @@ const EmotionProfilePage: React.FC = () => {
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         className={`p-4 rounded-xl border-2 ${complaint.resolved
-                                                ? 'bg-green-50 border-green-200'
-                                                : 'bg-red-50 border-red-200'
+                                            ? 'bg-green-50 border-green-200'
+                                            : 'bg-red-50 border-red-200'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className={`p-2 rounded-full ${complaint.resolved
-                                                    ? 'bg-green-100 text-green-600'
-                                                    : 'bg-red-100 text-red-500'
+                                                ? 'bg-green-100 text-green-600'
+                                                : 'bg-red-100 text-red-500'
                                                 }`}>
                                                 {complaint.resolved ? (
                                                     <CheckCircle2 size={20} />
@@ -119,8 +119,8 @@ const EmotionProfilePage: React.FC = () => {
                                             </div>
                                             <div className="flex-1">
                                                 <p className={`text-base ${complaint.resolved
-                                                        ? 'text-gray-500 line-through'
-                                                        : 'text-gray-800 font-medium'
+                                                    ? 'text-gray-500 line-through'
+                                                    : 'text-gray-800 font-medium'
                                                     }`}>
                                                     {complaint.text}
                                                 </p>
@@ -176,8 +176,37 @@ const EmotionProfilePage: React.FC = () => {
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                                             Mood: {moodValue > 0 ? '+' : ''}{moodValue}
+                                            <span className="text-2xl ml-3">
+                                                {moodValue >= 95 ? '🤣' :
+                                                    moodValue >= 85 ? '😂' :
+                                                        moodValue >= 70 ? '😆' :
+                                                            moodValue >= 50 ? '😁' :
+                                                                moodValue >= 30 ? '🥰' :
+                                                                    moodValue >= 15 ? '😊' :
+                                                                        moodValue >= 5 ? '🤗' :
+                                                                            moodValue >= -5 ? '🙂' :
+                                                                                moodValue >= -10 ? '😶' :
+                                                                                    moodValue >= -20 ? '😑' :
+                                                                                        moodValue >= -30 ? '😐' :
+                                                                                            moodValue >= -40 ? '😭' :
+                                                                                                moodValue >= -50 ? '😓' :
+                                                                                                    moodValue >= -60 ? '😩' :
+                                                                                                        moodValue >= -70 ? '😖' :
+                                                                                                            moodValue >= -80 ? '😒' :
+                                                                                                                moodValue >= -90 ? '😠' : '😡'}
+                                            </span>
                                             <span className="text-xs text-gray-500 ml-2">
-                                                ({moodValue > 50 ? 'Happy' : moodValue > 0 ? 'Normal' : moodValue > -50 ? 'Sad' : 'Angry'})
+                                                ({moodValue >= 85 ? 'Ecstatic' :
+                                                    moodValue >= 70 ? 'Joyful' :
+                                                        moodValue >= 50 ? 'Very Happy' :
+                                                            moodValue >= 30 ? 'Happy' :
+                                                                moodValue >= 15 ? 'Good' :
+                                                                    moodValue >= 5 ? 'Nice' :
+                                                                        moodValue >= -5 ? 'Normal' :
+                                                                            moodValue >= -20 ? 'Neutral' :
+                                                                                moodValue >= -40 ? 'Sad' :
+                                                                                    moodValue >= -60 ? 'Very Sad' :
+                                                                                        moodValue >= -80 ? 'Upset' : 'Very Angry'})
                                             </span>
                                         </label>
                                         <input
@@ -188,9 +217,10 @@ const EmotionProfilePage: React.FC = () => {
                                             onChange={(e) => setMoodValue(Number(e.target.value))}
                                             className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
                                         />
-                                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                            <span>Angry/Sad (-100)</span>
-                                            <span>Happy (+100)</span>
+                                        <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                            <span>😡 Angry (-100)</span>
+                                            <span className="text-[10px]">😠 😒 😖 😩 😓 😭 😐 😑 😶 🙂 🤗 😊 🥰 😁 😆 😂</span>
+                                            <span>🤣 Ecstatic (+100)</span>
                                         </div>
                                     </div>
 

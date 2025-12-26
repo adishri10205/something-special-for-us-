@@ -67,12 +67,12 @@ const EmotionDashboard: React.FC = () => {
                         animate={{ width: `${mainProgress}%` }}
                         transition={{ duration: 1, ease: 'easeOut' }}
                         className={`h-full rounded-full ${mainProgress >= 75
-                                ? 'bg-gradient-to-r from-green-400 to-green-500'
-                                : mainProgress >= 50
-                                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-500'
-                                    : mainProgress >= 25
-                                        ? 'bg-gradient-to-r from-orange-400 to-orange-500'
-                                        : 'bg-gradient-to-r from-red-400 to-red-500'
+                            ? 'bg-gradient-to-r from-green-400 to-green-500'
+                            : mainProgress >= 50
+                                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500'
+                                : mainProgress >= 25
+                                    ? 'bg-gradient-to-r from-orange-400 to-orange-500'
+                                    : 'bg-gradient-to-r from-red-400 to-red-500'
                             } shadow-lg`}
                     />
                     {/* Threshold Marker */}
@@ -97,12 +97,39 @@ const EmotionDashboard: React.FC = () => {
                     className={`${moodDisplay.bg} rounded-2xl p-6 shadow-lg border-2 border-${moodDisplay.color.replace('text-', '')}/20`}
                 >
                     <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-3 ${moodDisplay.bg} rounded-full`}>
-                            <MoodIcon className={moodDisplay.color} size={24} />
+                        <div className={`p-3 ${moodDisplay.bg} rounded-full text-4xl`}>
+                            {meters.mood >= 95 ? '🤣' :
+                                meters.mood >= 85 ? '😂' :
+                                    meters.mood >= 70 ? '😆' :
+                                        meters.mood >= 50 ? '😁' :
+                                            meters.mood >= 30 ? '🥰' :
+                                                meters.mood >= 15 ? '😊' :
+                                                    meters.mood >= 5 ? '🤗' :
+                                                        meters.mood >= -5 ? '🙂' :
+                                                            meters.mood >= -10 ? '😶' :
+                                                                meters.mood >= -20 ? '😑' :
+                                                                    meters.mood >= -30 ? '😐' :
+                                                                        meters.mood >= -40 ? '😭' :
+                                                                            meters.mood >= -50 ? '😓' :
+                                                                                meters.mood >= -60 ? '😩' :
+                                                                                    meters.mood >= -70 ? '😖' :
+                                                                                        meters.mood >= -80 ? '😒' : '😡'}
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-800">Mood Meter</h3>
-                            <p className="text-sm text-gray-600">{moodDisplay.label}</p>
+                            <p className="text-sm text-gray-600">
+                                {meters.mood >= 85 ? 'Ecstatic 🎉' :
+                                    meters.mood >= 70 ? 'Joyful 😄' :
+                                        meters.mood >= 50 ? 'Very Happy 😁' :
+                                            meters.mood >= 30 ? 'Happy 🥰' :
+                                                meters.mood >= 15 ? 'Good 😊' :
+                                                    meters.mood >= 5 ? 'Nice 🤗' :
+                                                        meters.mood >= -5 ? 'Normal 🙂' :
+                                                            meters.mood >= -20 ? 'Neutral 😶' :
+                                                                meters.mood >= -40 ? 'Sad 😭' :
+                                                                    meters.mood >= -60 ? 'Very Sad 😢' :
+                                                                        meters.mood >= -80 ? 'Upset 😖' : 'Very Angry 😡'}
+                            </p>
                         </div>
                     </div>
                     <div className="relative h-4 bg-white/50 rounded-full overflow-hidden">
@@ -110,17 +137,17 @@ const EmotionDashboard: React.FC = () => {
                             initial={{ width: 0 }}
                             animate={{ width: `${normalizedMood}%` }}
                             className={`h-full bg-gradient-to-r ${meters.mood > 50
-                                    ? 'from-green-400 to-green-500'
-                                    : meters.mood > 0
-                                        ? 'from-yellow-400 to-yellow-500'
-                                        : 'from-red-400 to-red-500'
+                                ? 'from-green-400 to-green-500'
+                                : meters.mood > 0
+                                    ? 'from-yellow-400 to-yellow-500'
+                                    : 'from-red-400 to-red-500'
                                 }`}
                         />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Angry/Sad</span>
+                        <span>😡 Angry</span>
                         <span className="font-semibold">{meters.mood > 0 ? '+' : ''}{meters.mood}</span>
-                        <span>Happy</span>
+                        <span>🤣 Happy</span>
                     </div>
                 </motion.div>
 
@@ -132,12 +159,24 @@ const EmotionDashboard: React.FC = () => {
                     className="bg-blue-50 rounded-2xl p-6 shadow-lg border-2 border-blue-100"
                 >
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-blue-100 rounded-full">
-                            <Shield className="text-blue-600" size={24} />
+                        <div className="p-3 bg-blue-100 rounded-full text-4xl">
+                            {meters.trust >= 90 ? '🛡️' :
+                                meters.trust >= 75 ? '🔐' :
+                                    meters.trust >= 60 ? '🤝' :
+                                        meters.trust >= 45 ? '👍' :
+                                            meters.trust >= 30 ? '🤷' :
+                                                meters.trust >= 15 ? '😕' : '🔓'}
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-800">Trust Meter</h3>
-                            <p className="text-sm text-gray-600">{meters.trust}% Trust Level</p>
+                            <p className="text-sm text-gray-600">
+                                {meters.trust >= 90 ? 'Unbreakable 🛡️' :
+                                    meters.trust >= 75 ? 'Very Strong 💪' :
+                                        meters.trust >= 60 ? 'Strong Trust ✨' :
+                                            meters.trust >= 45 ? 'Good Trust' :
+                                                meters.trust >= 30 ? 'Building Trust...' :
+                                                    meters.trust >= 15 ? 'Low Trust 😞' : 'Need to Build Trust'}
+                            </p>
                         </div>
                     </div>
                     <div className="relative h-4 bg-white/50 rounded-full overflow-hidden">
@@ -148,9 +187,9 @@ const EmotionDashboard: React.FC = () => {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Low Trust</span>
+                        <span>🔓 Low</span>
                         <span className="font-semibold">{meters.trust}%</span>
-                        <span>High Trust</span>
+                        <span>🛡️ High</span>
                     </div>
                 </motion.div>
 
@@ -162,12 +201,24 @@ const EmotionDashboard: React.FC = () => {
                     className="bg-pink-50 rounded-2xl p-6 shadow-lg border-2 border-pink-100"
                 >
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-pink-100 rounded-full">
-                            <Heart className="text-pink-600 fill-pink-600" size={24} />
+                        <div className="p-3 bg-pink-100 rounded-full text-4xl">
+                            {meters.love >= 95 ? '💖' :
+                                meters.love >= 80 ? '💝' :
+                                    meters.love >= 65 ? '❤️' :
+                                        meters.love >= 50 ? '💕' :
+                                            meters.love >= 35 ? '💗' :
+                                                meters.love >= 20 ? '💓' : '💔'}
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-800">My Love for You</h3>
-                            <p className="text-sm text-gray-600">{meters.love}% Love Intensity</p>
+                            <p className="text-sm text-gray-600">
+                                {meters.love >= 95 ? 'Beyond Infinite 💖✨' :
+                                    meters.love >= 80 ? 'Infinite Love 💝' :
+                                        meters.love >= 65 ? 'Deep Love ❤️' :
+                                            meters.love >= 50 ? 'Strong Love 💕' :
+                                                meters.love >= 35 ? 'Growing Love 💗' :
+                                                    meters.love >= 20 ? 'Developing 💓' : 'New Love 💔'}
+                            </p>
                         </div>
                     </div>
                     <div className="relative h-4 bg-white/50 rounded-full overflow-hidden">
@@ -178,9 +229,9 @@ const EmotionDashboard: React.FC = () => {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Growing</span>
+                        <span>💔 Growing</span>
                         <span className="font-semibold">{meters.love}%</span>
-                        <span>Infinite ❤️</span>
+                        <span>💖 Infinite</span>
                     </div>
                 </motion.div>
 
@@ -192,12 +243,20 @@ const EmotionDashboard: React.FC = () => {
                     className="bg-orange-50 rounded-2xl p-6 shadow-lg border-2 border-orange-100"
                 >
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-orange-100 rounded-full">
-                            <AlertCircle className="text-orange-600" size={24} />
+                        <div className="p-3 bg-orange-100 rounded-full text-4xl">
+                            {meters.complaints >= 75 ? '🚨' :
+                                meters.complaints >= 50 ? '❗' :
+                                    meters.complaints >= 30 ? '⚠️' :
+                                        meters.complaints >= 15 ? '💬' : '✅'}
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-800">Complaints</h3>
-                            <p className="text-sm text-gray-600">{meters.complaints}% Negative Impact</p>
+                            <p className="text-sm text-gray-600">
+                                {meters.complaints >= 75 ? 'Critical Issues 🚨' :
+                                    meters.complaints >= 50 ? 'Many Problems ❗' :
+                                        meters.complaints >= 30 ? 'Some Issues ⚠️' :
+                                            meters.complaints >= 15 ? 'Few Concerns 💬' : 'All Good ✅'}
+                            </p>
                         </div>
                     </div>
                     <div className="relative h-4 bg-white/50 rounded-full overflow-hidden">
@@ -208,9 +267,9 @@ const EmotionDashboard: React.FC = () => {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>All Good ✨</span>
+                        <span>✅ All Good</span>
                         <span className="font-semibold">{meters.complaints}%</span>
-                        <span>Many Issues</span>
+                        <span>🚨 Many Issues</span>
                     </div>
                 </motion.div>
             </div>
