@@ -87,7 +87,8 @@ export const INITIAL_CARD_VISIBILITY: CardVisibility = {
   '/vault': true,
   '/links': true,
   '/flipbook': true,
-  '/voice-notes': true
+  '/voice-notes': true,
+  '/question-wall': true
 };
 
 export const INITIAL_MESSAGE = "Happy Birthday! Welcome to your special corner of the web.";

@@ -240,6 +240,7 @@ const Home: React.FC = () => {
       case '/secret-message': return hasPermission('canViewSecretMessage');
       case '/complain': return hasPermission('canViewComplaints');
       case '/wishes': return hasPermission('canViewWishes');
+      case '/question-wall': return hasPermission('canViewQuestionWall');
       default: return true; // Other cards visible by default
     }
   });

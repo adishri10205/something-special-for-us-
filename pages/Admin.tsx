@@ -2173,7 +2173,7 @@ const Admin: React.FC = () => {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries({
-                  canViewTimeline: 'View Journey',
+                  canViewJourney: 'View Journey',
                   canViewGallery: 'View Gallery',
                   canViewReels: 'View Reels',
                   canViewMusic: 'View Music',
@@ -2183,7 +2183,11 @@ const Admin: React.FC = () => {
                   canViewFlipbook: 'View Flipbook',
                   canViewLinks: 'View Links',
                   canViewVideos: 'View Videos',
-                  canViewVoiceNotes: 'View Voice Notes'
+                  canViewVoiceNotes: 'View Voice Notes',
+                  canViewSecretMessage: 'View Secret Message',
+                  canViewComplaints: 'View Complain Box',
+                  canViewWishes: 'View Wishes',
+                  canViewQuestionWall: 'View Question Wall'
                 }).map(([key, label]) => {
                   const permKey = key as keyof import('../types').UserPermissions;
                   const isEnabled = permissionUser.customPermissions?.[permKey] || false;

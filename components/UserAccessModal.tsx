@@ -18,17 +18,33 @@ const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
     canViewMusic: 'View Music',
     canViewNotes: 'View Notes',
     canViewMessages: 'View Messages',
-    canViewVault: 'Access Vault',
+    canViewVault: 'View Vault',
+    canViewFlipbook: 'View Flipbook',
+    canViewVoiceNotes: 'View Voice Notes',
+    canViewSecretMessage: 'View Secret Message',
+    canViewComplaints: 'View Complain Box',
+    canViewWishes: 'View Wishes',
+    canViewQuestionWall: 'View Question Wall',
     canViewAdmin: 'Access Admin Panel',
 
     // Edit Access
     canEditTimeline: 'Edit Timeline',
     canEditGallery: 'Edit Gallery',
     canEditReels: 'Edit Reels',
-    canAddReels: 'Add Reels',
-    canDeleteReels: 'Delete Reels',
     canEditMusic: 'Edit Music',
     canEditNotes: 'Edit Notes',
+    canEditFlipbook: 'Edit Flipbook',
+    canEditVoiceNotes: 'Edit Voice Notes',
+    canEditWishes: 'Edit Wishes',
+
+    // Special Permissions
+    canAddReels: 'Add Reels',
+    canDeleteReels: 'Delete Reels',
+    canDeleteNotes: 'Delete Notes',
+    canAddComplaints: 'Add Complaints',
+    canDeleteComplaints: 'Delete Complaints',
+    canAddWishes: 'Add Wishes',
+    canDeleteWishes: 'Delete Wishes',
 };
 
 const PermissionModal: React.FC<PermissionModalProps> = ({ user, isOpen, onClose, onUpdate }) => {

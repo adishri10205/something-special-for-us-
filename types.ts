@@ -110,6 +110,7 @@ export interface UserPermissions {
   canViewAdmin?: boolean;
   canViewMessages?: boolean;
   canViewSecretMessage?: boolean;
+  canViewQuestionWall?: boolean;
 
   // Special Permissions
   canDeleteReels?: boolean;
